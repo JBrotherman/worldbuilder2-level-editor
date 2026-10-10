@@ -21,12 +21,16 @@ comes with two 12-mission campaigns: Brickwood Valley and Brickton City.
 folder, next to `Start Editor.bat`:
 
 ```
-WB2-Level-Editor  Start Editor.bat
+WB2-Level-Editor/
+  Start Editor.bat
   Play WorldBuilder 2.bat
-  WorldBuilder2    worldbuilder2      worldbuilder2.dcr
+  WorldBuilder2/
+    worldbuilder2/
+      worldbuilder2.dcr
       Launcher.exe
-  WorldBuilder              (optional, the original WorldBuilder)
-    worldbuilder      worldbuilder.dcr
+  WorldBuilder/               (optional, the original WorldBuilder)
+    worldbuilder/
+      worldbuilder.dcr
 ```
 
 Or leave the games where they are and tell the editor: the first time it can't
