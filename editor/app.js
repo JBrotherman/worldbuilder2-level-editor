@@ -114,7 +114,7 @@
       }),
     });
     const planTypes = [...Object.keys(config.vehicle), ...Object.keys(config.building)]
-      .filter((t) => MapView.unitSprite(view, config.vehicle[t] ? 'vehicle' : 'building', t, false));
+      .filter((t) => !Level.BROKEN_PLANS[t] && MapView.unitSprite(view, config.vehicle[t] ? 'vehicle' : 'building', t, false));
     sections.push({
       title: 'Plans',
       entries: planTypes.map((type) => {

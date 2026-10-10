@@ -205,6 +205,10 @@
 
   const MAX_TEXT = 4000; // keep in sync with tools/xmed.js
 
+  // Plans the game can't handle: the original never lets you build these,
+  // and selecting their plan causes a script error (no placement picture).
+  const BROKEN_PLANS = { windmill: 'Windmill' };
+
   // cat: { config: {vehicle, building, monster}, terrain: [{char, name}] }
   // Returns [{severity: 'error'|'warning', message, cells: [{x, y}]}].
   function validate(level, cat) {
@@ -238,6 +242,7 @@
             note(`${def.name || it.type} can't be placed on water`, x, y);
           }
         } else if (it.kind === 'plan') {
+          if (BROKEN_PLANS[it.type]) note(`${BROKEN_PLANS[it.type]} plans crash the game when selected (it can't build one). Place a ${BROKEN_PLANS[it.type].toLowerCase()} on the map instead`, x, y);
           if (!buildable(it.type)) note(`Unknown plan "${it.type}"`, x, y);
           else available.add(it.type);
           if (!(it.count >= 1)) note('Plan with no uses', x, y);
@@ -276,6 +281,7 @@
     }
 
     for (const inv of level.inventory) {
+      if (BROKEN_PLANS[inv.type]) add('error', `${BROKEN_PLANS[inv.type]} plans crash the game when selected (it can't build one). Remove this starting plan`);
       if (!buildable(inv.type)) add('error', `Starting plan "${inv.type}" is not a vehicle or building`);
       if (!(inv.count >= 1)) add('error', `Starting plan "${inv.type}" has no uses`);
     }
@@ -301,5 +307,5 @@
     return problems;
   }
 
-  exports.Level = { parse, serialize, gameText, create, resize, clone, validate, parseItem, itemValue, itemTerrain, PILE_COLORS, MAX_TEXT };
+  exports.Level = { parse, serialize, gameText, create, resize, clone, validate, parseItem, itemValue, itemTerrain, PILE_COLORS, MAX_TEXT, BROKEN_PLANS };
 })(typeof module !== 'undefined' ? module.exports : window);
