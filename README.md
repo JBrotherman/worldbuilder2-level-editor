@@ -29,6 +29,20 @@ Keep the black window open while you edit. Closing it stops the editor.
 
 Units and plans placed on water automatically use their water version.
 
+## Bigger game window
+
+The game itself is fixed at 610×440. **Play in game** (and **`Play WorldBuilder
+2.bat`**, which runs the original game) opens it through `WB2Window.exe`
+instead: a resizable window that scales the game up while keeping its shape.
+Press **F11** for fullscreen. It's compiled automatically from
+`tools/window/WB2Window.cs` with the C# compiler built into Windows.
+
+How it works: the window shows a live, GPU-scaled DWM thumbnail of the game.
+The real game window is made invisible and kept just above it, and on every
+mouse move it's shifted so the game pixel matching your cursor sits exactly
+under the cursor. Clicks, hovering and the game's cursors work as normal, with
+no faked input.
+
 ## How it works
 
 The game is an Adobe Director movie (`worldbuilder2.dcr`, Afterburner

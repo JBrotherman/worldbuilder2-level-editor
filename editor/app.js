@@ -686,7 +686,8 @@
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error);
-      toast('Game launching… Start the game and click the first mission on the world map to play this level.', false, 9000);
+      toast('Game launching… Start the game and click the first mission on the world map to play this level.'
+        + (body.scaled ? ' Resize the window to scale it; F11 toggles fullscreen.' : ''), false, 9000);
     } catch (e) {
       toast(e.message, true, 7000);
     } finally {

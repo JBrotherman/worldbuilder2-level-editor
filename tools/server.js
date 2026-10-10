@@ -10,6 +10,7 @@ const { spawn } = require('child_process');
 const game = require('./game');
 const catalog = require('./catalog');
 const { createSpriteStore } = require('./sprites');
+const gameWindow = require('./window');
 
 const ROOT = path.join(__dirname, '..');
 const EDITOR_DIR = path.join(ROOT, 'editor');
@@ -66,9 +67,8 @@ function play({ text, title }) {
     }
     throw e;
   }
-  const exe = path.join(outDir, 'Launcher.exe');
-  spawn(exe, [], { cwd: outDir, detached: true, stdio: 'ignore' }).unref();
-  return { ok: true, slot: PLAY_SLOT };
+  const { scaled } = gameWindow.launch(path.join(outDir, 'Launcher.exe'));
+  return { ok: true, slot: PLAY_SLOT, scaled };
 }
 
 async function handle(req, res) {
