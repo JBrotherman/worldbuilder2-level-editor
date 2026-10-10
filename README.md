@@ -14,8 +14,10 @@ Keep the black window open while you edit. Closing it stops the editor.
 
 - **Palette (left):** terrain, vehicles & robots, buildings, monsters, brick
   piles, plans, goals and whirlpools. Click one, then click or drag on the map.
-- **Tools:** Paint (P), Erase items (E or right-click), Pick from map (I), and
-  Start view (C) to choose where the camera starts.
+- **Tools:** Select (V or Esc) to inspect and edit tiles without changing the
+  map, Paint (P), Erase items (E, or right-click while painting), Pick from
+  map (I), and Start view (C) to choose where the camera starts. Each tool has
+  its own cursor; the paint cursor shows a small picture of the brush.
 - **Inspector (right):** level title, map size, starting plans, and the
   settings of the selected tile (pile contents, plan uses, goal target…).
 - **Problems:** live checks such as a missing goal, unknown types, a goal the

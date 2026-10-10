@@ -175,6 +175,12 @@
     const key = brushKey(state.brush);
     for (const b of state.paletteButtons) b.setAttribute('aria-pressed', String(brushKey(b.brush) === key));
     renderBrushInfo();
+    updateCursor();
+  }
+
+  function brushSprite(b) {
+    if (b.type === 'terrain') return view.first(`terrain.${view.terrainName(b.char)}`);
+    return itemSprite(b.item);
   }
 
   function describeItem(it) {
@@ -193,18 +199,16 @@
     const box = $('#brushInfo');
     box.innerHTML = '';
     if (state.tool !== 'paint') {
-      box.append(el('span', {}, { erase: 'Click or drag to remove items', pick: 'Click a tile to copy it into the brush', center: 'Click where the camera should start' }[state.tool]));
+      box.append(el('span', {}, {
+        select: 'Click a tile to inspect and edit it',
+        erase: 'Click or drag to remove items',
+        pick: 'Click a tile to copy it into the brush',
+        center: 'Click where the camera should start',
+      }[state.tool]));
       return;
     }
-    let sprite, label;
-    if (b.type === 'terrain') {
-      const name = view.terrainName(b.char);
-      sprite = view.first(`terrain.${name}`);
-      label = terrainLabel(name);
-    } else {
-      sprite = itemSprite(b.item);
-      label = describeItem(b.item);
-    }
+    const sprite = brushSprite(b);
+    const label = b.type === 'terrain' ? terrainLabel(view.terrainName(b.char)) : describeItem(b.item);
     if (sprite) box.append(el('img', { src: spriteUrl(sprite), alt: '' }));
     box.append(el('span', {}, 'Brush: '), el('strong', {}, label));
   }
@@ -214,6 +218,86 @@
     state.tool = tool;
     for (const b of document.querySelectorAll('[data-tool]')) b.setAttribute('aria-pressed', String(b.dataset.tool === tool));
     renderBrushInfo();
+    updateCursor();
+  }
+
+  // ---------------------------------------------------------------- cursors
+  // Each tool gets its own cursor; the paint cursor also carries a small
+  // picture of the current brush.
+  const CURSOR_SIZE = 32;
+  const TOOL_CURSORS = {
+    select: { hot: [1, 1], fallback: 'default', draw(ctx) {
+      outlined(ctx, new Path2D('M1.5 1.5 L1.5 22 L6.5 17.5 L10 25.5 L13.5 24 L10 16 L16.5 16 Z'), '#fff');
+    } },
+    paint: { hot: [2, 29], fallback: 'crosshair', draw(ctx) {
+      outlined(ctx, new Path2D('M8 19 L17 10 L21 14 L12 23 Z'), '#c9c9d1');           // ferrule
+      outlined(ctx, new Path2D('M17 10 L26 1.5 L30 5.5 L21 14 Z'), '#b5651d');          // handle
+      outlined(ctx, new Path2D('M8 19 L12 23 C9 27 6 29 1.5 30 C2.5 25.5 4.5 22 8 19 Z'), '#ffcf1a'); // bristles
+    } },
+    erase: { hot: [4, 28], fallback: 'crosshair', draw(ctx) {
+      outlined(ctx, new Path2D('M3 22 L15 10 L23 18 L13 28 L7 28 Z'), '#ff8fa3');
+      outlined(ctx, new Path2D('M15 10 L22 3 L30 11 L23 18 Z'), '#4f9dff');
+    } },
+    pick: { hot: [2, 29], fallback: 'crosshair', draw(ctx) {
+      outlined(ctx, new Path2D('M2 29.5 L3 25 L16 12 L19 15 L6 28 Z'), '#e7e9ee');
+      outlined(ctx, new Path2D('M14 10 L21 17 L23 15 L16 8 Z'), '#7d8596');
+      outlined(ctx, new Path2D('M19 12 C17 10 18 7 21 4 C24 1 27 1 29 3 C31 5 31 8 28 11 C25 14 22 15 20 13 Z'), '#ff5a4f');
+    } },
+    center: { hot: [16, 16], fallback: 'crosshair', draw(ctx) {
+      const ring = new Path2D();
+      ring.arc(16, 16, 9, 0, Math.PI * 2);
+      const cross = new Path2D('M16 1 L16 10 M16 22 L16 31 M1 16 L10 16 M22 16 L31 16');
+      for (const [w, c] of [[4, '#000'], [2, '#fff']]) {
+        ctx.lineWidth = w; ctx.strokeStyle = c;
+        ctx.stroke(ring); ctx.stroke(cross);
+      }
+    } },
+  };
+
+  function outlined(ctx, path, fill) {
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(path);
+    ctx.fillStyle = fill; ctx.fill(path);
+    ctx.lineWidth = 1.2; ctx.strokeStyle = '#000'; ctx.stroke(path);
+  }
+
+  const cursorImages = new Map();
+  function cursorImage(name) {
+    let img = cursorImages.get(name);
+    if (!img) {
+      img = new Image();
+      img.onload = () => updateCursor();
+      img.src = spriteUrl(name);
+      cursorImages.set(name, img);
+    }
+    return img.complete && img.naturalWidth ? img : null;
+  }
+
+  function updateCursor() {
+    const def = TOOL_CURSORS[state.tool];
+    if (!def) return;
+    const c = document.createElement('canvas');
+    c.width = c.height = CURSOR_SIZE;
+    const ctx = c.getContext('2d');
+    if (state.tool === 'paint') {
+      // Brush preview badge in the top-left corner, away from the hotspot.
+      const sprite = brushSprite(state.brush);
+      const img = sprite && cursorImage(sprite);
+      const isPlan = state.brush.type === 'item' && state.brush.item.kind === 'plan';
+      ctx.fillStyle = isPlan ? 'rgba(40,110,220,0.95)' : 'rgba(21,23,28,0.9)';
+      ctx.strokeStyle = '#ffcf1a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(0.75, 0.75, 17, 17, 3);
+      ctx.fill(); ctx.stroke();
+      if (img) {
+        const s = Math.min(15 / img.naturalWidth, 15 / img.naturalHeight);
+        const w = img.naturalWidth * s, h = img.naturalHeight * s;
+        ctx.drawImage(img, 1.5 + (15 - w) / 2, 1.5 + (15 - h) / 2, w, h);
+      }
+    }
+    def.draw(ctx);
+    canvas.style.cursor = `url(${c.toDataURL()}) ${def.hot[0]} ${def.hot[1]}, ${def.fallback}`;
   }
 
   function pushUndo() {
@@ -249,6 +333,8 @@
     const { x, y } = cell;
     const before = JSON.stringify([lv.terrain[y][x], lv.items[y][x], lv.center]);
     switch (state.tool) {
+      case 'select':
+        return false; // selecting happens on mousedown; never edits
       case 'paint':
         if (state.brush.type === 'terrain') {
           lv.items[y][x] = null;
@@ -290,8 +376,11 @@
     select(cell);
     const snapshot = JSON.stringify(state.level);
     const prevTool = state.tool;
-    if (e.button === 2) state.tool = 'erase';
-    else if (e.button !== 0) return;
+    if (e.button === 2) {
+      // Right-click erases only while painting/erasing; elsewhere it just selects.
+      if (prevTool !== 'paint' && prevTool !== 'erase') return;
+      state.tool = 'erase';
+    } else if (e.button !== 0) return;
     drag = { snapshot, changed: applyTool(cell), restoreTool: e.button === 2 ? prevTool : null, last: cell };
     if (drag.changed) afterEdit();
   });
@@ -709,7 +798,8 @@
     if (ctrl && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
     if (ctrl) return;
     const k = e.key.toLowerCase();
-    if (k === 'p') setTool('paint');
+    if (k === 'v' || k === 'escape') setTool('select');
+    else if (k === 'p') setTool('paint');
     else if (k === 'e') setTool('erase');
     else if (k === 'i') setTool('pick');
     else if (k === 'c') setTool('center');
@@ -725,7 +815,7 @@
   // ---------------------------------------------------------------- start
   window.wb2 = { state, view }; // handy for debugging from the console
   buildPalette();
-  setTool('paint');
+  setTool('select');
   setBrush({ type: 'terrain', char: '.' });
   $('#btnGrid').setAttribute('aria-pressed', 'true');
   let zoom = 1;
