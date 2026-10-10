@@ -1,0 +1,21 @@
+[map]
+name=EDITOR TEST
+ map=wwwwwwwwwwww
+ map=w....T....ww
+ map=w.a..T..b..w
+ map=w....__....w
+ map=w..c.__..1.w
+ map=w....__....w
+ map=w.T........w
+ map=wwwwwwwwwwww
+
+center=6,4
+
+[mapitems]
+a=unit,vehicle,dirtbuggy
+b=plan,duck,5
+c=pile,yellow,10,energy,1
+1=goal,duck
+
+[inventory]
+dirtbuggy=2
