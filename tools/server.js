@@ -110,6 +110,16 @@ async function handle(req, res) {
     }
   }
 
+  // Lets a newly started editor replace this one. The custom header can't be
+  // sent cross-origin without a CORS preflight, which we never approve, so
+  // web pages can't trigger it.
+  if (p === '/api/shutdown' && req.method === 'POST' && req.headers['x-wb2-editor'] === '1') {
+    json(res, { ok: true });
+    console.log('Another editor window took over. This one is closing.');
+    setTimeout(() => process.exit(0), 100);
+    return;
+  }
+
   if (p === '/api/play' && req.method === 'POST') {
     return json(res, play(JSON.parse(await readBody(req))));
   }
@@ -131,10 +141,51 @@ async function handle(req, res) {
   send(res, 200, fs.readFileSync(file), MIME[path.extname(file)] || 'application/octet-stream');
 }
 
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   handle(req, res).catch((e) => json(res, { error: e.message }, e.status || 500));
-}).listen(PORT, '127.0.0.1', () => {
-  const url = `http://localhost:${PORT}/`;
+});
+
+function listen(port) {
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, '127.0.0.1', () => { server.off('error', reject); resolve(port); });
+  });
+}
+
+// If an older editor is already running on the port, ask it to stop so this
+// (possibly newer) one takes over.
+async function replaceRunningEditor(port) {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/shutdown`, {
+      method: 'POST', headers: { 'X-WB2-Editor': '1' }, signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) return false;
+  } catch (e) {
+    return false;
+  }
+  await new Promise((r) => setTimeout(r, 500));
+  return true;
+}
+
+(async () => {
+  let port = PORT;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await listen(port);
+      break;
+    } catch (e) {
+      if (e.code !== 'EADDRINUSE' || attempt >= 10) throw e;
+      if (port === PORT && attempt === 0 && await replaceRunningEditor(port)) {
+        console.log('Replaced an editor that was already running.');
+        continue;
+      }
+      port++; // something else uses this port; try the next one
+    }
+  }
+  const url = `http://localhost:${port}/`;
   console.log(`WorldBuilder 2 level editor: ${url}  (close this window to stop it)`);
   if (OPEN_BROWSER) spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
+})().catch((e) => {
+  console.error(`Could not start the editor: ${e.message}`);
+  process.exit(1);
 });
