@@ -55,23 +55,30 @@ function setLibMaxMember(movie, libIndex, max) {
   ab.setChunk(movie, res.id, d);
 }
 
-// KEY*: append links from child chunks (BITD, CLUT) to their CASt.
+// KEY*: add links from child chunks (BITD, CLUT) to their CASt. The player
+// looks entries up by binary search, so the table must stay sorted by owner
+// (castId); appending out of order breaks lookups of other entries.
 function addKeys(movie, entries) {
   const res = ab.findAll(movie, 'KEY*')[0];
   const old = ab.chunkData(movie, res);
   const used = old.readUInt32LE(8);
-  const total = used + entries.length;
-  const max = Math.max(old.readUInt32LE(4), total);
+  const all = [];
+  for (let i = 0; i < used; i++) all.push(old.subarray(12 + i * 12, 24 + i * 12));
+  for (const { sectionId, castId, tag } of entries) {
+    const e = Buffer.alloc(12);
+    e.writeUInt32LE(sectionId, 0);
+    e.writeUInt32LE(castId, 4);
+    Buffer.from(tag, 'latin1').reverse().copy(e, 8);
+    all.push(e);
+  }
+  // Array.prototype.sort is stable, so existing entries keep their order.
+  all.sort((a, b) => a.readUInt32LE(4) - b.readUInt32LE(4));
+  const max = Math.max(old.readUInt32LE(4), all.length);
   const d = Buffer.alloc(12 + max * 12);
-  old.copy(d, 0, 0, Math.min(old.length, d.length));
+  old.copy(d, 0, 0, 12);
   d.writeUInt32LE(max, 4);
-  d.writeUInt32LE(total, 8);
-  entries.forEach(({ sectionId, castId, tag }, i) => {
-    const o = 12 + (used + i) * 12;
-    d.writeUInt32LE(sectionId, o);
-    d.writeUInt32LE(castId, o + 4);
-    Buffer.from(tag, 'latin1').reverse().copy(d, o + 8);
-  });
+  d.writeUInt32LE(all.length, 8);
+  all.forEach((e, i) => e.copy(d, 12 + i * 12));
   ab.setChunk(movie, res.id, d);
 }
 

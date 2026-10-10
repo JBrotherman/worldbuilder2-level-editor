@@ -138,7 +138,20 @@ function setChunk(movie, id, data) { movie.overrides.set(id, Buffer.from(data));
 // Add a new resource and return its id. ILS chunks (cast member headers and
 // tables) are loaded up front; media such as BITD/CLUT goes in the body.
 function addChunk(movie, tag, data, { ils = false } = {}) {
-  const id = movie.abmpUnk2 + 1; // ABMP keeps the highest resource id here
+  if (movie.nextId === undefined) {
+    // KEY* still lists authoring-only chunks (score references, grids...)
+    // that Afterburner stripped from the ABMP. New ids must not reuse those,
+    // or the player loads our data in their place.
+    let max = movie.abmpUnk2;
+    const key = movie.resources.find((r) => r.tag === 'KEY*');
+    if (key) {
+      const d = chunkData(movie, key);
+      const used = d.readUInt32LE(8);
+      for (let i = 0; i < used; i++) max = Math.max(max, d.readUInt32LE(12 + i * 12));
+    }
+    movie.nextId = max + 1;
+  }
+  const id = movie.nextId++;
   const zlibIndex = movie.compressionTypes.findIndex((t) => ZLIB_GUIDS.includes(t.guid));
   const res = { id, tag, offset: ils ? -1 : 0, compSize: data.length, size: data.length, compType: Math.max(0, zlibIndex) };
   movie.resources.push(res);
