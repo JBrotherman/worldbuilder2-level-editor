@@ -120,4 +120,4 @@ function decodeMember(movie, member, palettes) {
   return { ...decode(spec, ab.chunkData(movie, res), palette), regX: spec.regX, regY: spec.regY, bpp: spec.bpp };
 }
 
-module.exports = { readSpec, decode, decodeMember, readClut, encodePng };
+module.exports = { readSpec, decode, decodeMember, readClut, encodePng, crc32 };
