@@ -15,7 +15,7 @@ const BUILD_DIR = path.join(ROOT, 'build', 'worldbuilder2');
 // its folder is present.
 function load({ extras = true } = {}) {
   const movie = ab.parse(fs.readFileSync(path.join(GAME_DIR, 'worldbuilder2.dcr')));
-  const added = extras ? require('./wb1').addMissingSprites(movie) : [];
+  const added = [...require('./fixes').applyFixes(movie), ...(extras ? require('./wb1').addMissingSprites(movie) : [])];
   const textMembers = new Map(); // name -> XMED resource
   for (const m of cast.members(movie).values()) {
     const child = m.children.find((c) => c.tag === 'XMED');
