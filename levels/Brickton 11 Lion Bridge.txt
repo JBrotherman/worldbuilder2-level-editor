@@ -1,0 +1,32 @@
+-- editor-title: Lion Bridge
+[map]
+name=LION BRIDGE
+ map=MMMMMMMMMMMMMMMMMM
+ map=M.....wwwwww.....M
+ map=M.....wwwwww.a.b.M
+ map=M.c...wwwwww..1..M
+ map=M.....wwwwww.d...M
+ map=M.e......f.f....2M
+ map=M.....wwwwww.....M
+ map=M.g...wwwwww.....M
+ map=M.....wwwwww.....M
+ map=MMMMMMMMMMMMMMMMMM
+
+center=3,6
+
+[mapitems]
+a=pile,blue,20
+b=pile,green,20
+c=pile,blue,40,yellow,25,energy,1
+d=pile,white,25
+e=unit,vehicle,dumptruck
+f=unit,monster,lion
+g=pile,blue,20,green,10,yellow,5,energy,1
+
+1=bonusgoal,house
+2=goal,dumptruck
+
+[inventory]
+defender=1
+repairbot=1
+house=1

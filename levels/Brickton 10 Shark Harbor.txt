@@ -1,0 +1,36 @@
+-- editor-title: Shark Harbor
+[map]
+name=SHARK HARBOR
+ map=MMMMMMMMMMMMMMMMMM
+ map=M.a......b.......M
+ map=M................M
+ map=M..cd.....\......M
+ map=Mwewwwwwww.wwwwwwM
+ map=MwwwwwwwwwwwwwwwwM
+ map=MwwwwwwwwfwwfwwwwM
+ map=MwwwwwwwwwwwwwwwgM
+ map=Mwwwwwwwwwwwwwww1M
+ map=Mwwwwwwwwww..2...M
+ map=Mwwwwwwwwww...h..M
+ map=MMMMMMMMMMMMMMMMMM
+
+center=3,2
+
+[mapitems]
+a=unit,vehicle,buggy
+b=pile,blue,5,red,5,white,10,yellow,25,energy,1
+c=pile,red,25
+d=pile,yellow,25
+e=waterpile,blue,25,energy,1
+f=waterunit,monster,shark
+g=waterpile,blue,15,green,5
+h=pile,energy,1
+
+1=bonusgoal,marina,water
+2=goal,guard_tower
+
+[inventory]
+freezebot=1
+freighter=1
+guard_tower=1
+marina=1

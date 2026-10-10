@@ -1,0 +1,33 @@
+-- editor-title: Factory Floor
+[map]
+name=FACTORY FLOOR
+ map=MMMMMMMMMMMMMMMM
+ map=M.***.a.......bM
+ map=M.*c.[\\\\\\\].M
+ map=M.***/......./dM
+ map=M.e../.TT.T../.M
+ map=M..../..T..../.M
+ map=M\\\\+\\\\\\\).M
+ map=M..../......./.M
+ map=M..../....f1g/.M
+ map=M..../......./2M
+ map=MMMMMMMMMMMMMMMM
+
+center=15,2
+
+[mapitems]
+a=unit,building,robot_lab
+b=unit,vehicle,dumptruck
+c=unit,building,factory
+d=unit,building,gas_station
+e=pile,green,20,blue,25,energy,1
+f=pile,blue,20
+g=pile,white,25
+
+1=goal,house
+2=bonusgoal,guard_tower
+
+[inventory]
+treebot=1
+house=1
+guard_tower=1

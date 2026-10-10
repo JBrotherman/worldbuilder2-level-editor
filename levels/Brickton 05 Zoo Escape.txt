@@ -1,0 +1,29 @@
+-- editor-title: Zoo Escape
+[map]
+name=ZOO ESCAPE
+ map=MMMMMMMMMMMMMMMMMM
+ map=M***1*******2****M
+ map=M***.*******.****M
+ map=M***.*******.****M
+ map=M.a..........\...M
+ map=M.b..c.......c...M
+ map=M....[\\\\\\\]...M
+ map=M.d../......./...M
+ map=M.e../...f.../...M
+ map=M..../......./...M
+ map=MMMMMMMMMMMMMMMMMM
+
+center=3,5
+
+[mapitems]
+a=unit,vehicle,buggy
+b=plan,freezebot,1
+c=unit,monster,lion
+d=pile,blue,5,red,5,white,10,yellow,25,energy,1
+e=pile,yellow,15,wheel,2,energy,1
+f=plan,dozer,1
+
+1=bonusgoal,collect 1 lion
+2=goal,collect 1 lion
+
+[inventory]

@@ -1,0 +1,35 @@
+-- editor-title: Green Belt
+[map]
+name=GREEN BELT
+ map=MMMMMMMMMMMMMMMMMM
+ map=M.a....../....b**M
+ map=M.c....../......dM
+ map=M......../.....**M
+ map=M\\\\\\\\+\\\\\\.M
+ map=M....e.../.......M
+ map=M...f..../..g1...M
+ map=M***...../.......M
+ map=M*h....../....2..M
+ map=M***...../.......M
+ map=MMMMMMMMMMMMMMMMMM
+
+center=3,2
+
+[mapitems]
+a=unit,vehicle,dumptruck
+b=unit,building,robot_lab
+c=pile,green,20,blue,25,energy,1
+d=unit,building,factory
+e=unit,monster,crab
+f=pile,blue,40,yellow,25,energy,1
+g=pile,white,25,energy,1
+h=unit,building,nursery
+
+1=goal,garage
+2=bonusgoal,buggy
+
+[inventory]
+defender=1
+treebot=1
+garage=1
+buggy=1

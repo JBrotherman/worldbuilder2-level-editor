@@ -1,0 +1,28 @@
+-- editor-title: Power Outage
+[map]
+name=POWER OUTAGE
+ map=MMMMMMMMMMMMMMMMMM
+ map=M*a*......w...w1wM
+ map=M*.*......w...wwwM
+ map=M.........w......M
+ map=M.......b.w......M
+ map=M\\\\\\\\\w\\\\\\M
+ map=M.c.......w....d2M
+ map=M.........w......M
+ map=MMMMMMMMMMMMMMMMMM
+
+center=3,7
+
+[mapitems]
+a=unit,building,windmill
+b=pile,yellow,25,wheel,4
+c=unit,vehicle,dirtbuggy
+d=pile,red,25,yellow,25
+
+1=bonusgoal,duck,water
+2=goal,guard_tower
+
+[inventory]
+steamshovel=1
+guard_tower=1
+duck=1

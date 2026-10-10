@@ -28,13 +28,18 @@ const path = require('path');
 const { Level } = require('../editor/level.js');
 
 const TREES = new Set(['tree', 'tree2', 'tree3', 'tree4']);
-// Fights the config numbers say a unit reliably wins on its own (damage
-// x hit chance vs. the monster's shield). Scorpions, lions and T-Rexes beat a
-// lone defender, so they need a guard tower (range 2) or must be avoided.
-const BEATABLE = {
-  defender: ['crab', 'water_crab', 'gator'], defender2: ['crab', 'water_crab', 'gator'], defender3: ['crab', 'water_crab', 'gator'],
-  speedboat: ['water_crab', 'shark'], guard_tower: ['crab', 'water_crab', 'gator', 'scorpion', 'shark'],
-};
+// A fight is only allowed when the attackers clearly win according to the
+// config: damage per second = hits/min x hit chance x average damage x the
+// target's shield, and both sides have 100 energy. The attackers must need
+// at most WIN_MARGIN of the time the monster needs. Frozen monsters don't
+// fight back.
+const WIN_MARGIN = 0.85;
+
+function dps(attack, shield) {
+  if (!attack) return 0;
+  const [lo, hi] = attack.damage_range || [0, 0];
+  return (attack.hits_per_minute || 0) / 60 * (attack.chance_of_success || 0) / 100 * ((lo + hi) / 2) * (shield == null ? 1 : shield);
+}
 
 function loadConfig() {
   // Prefer the game's own config; fall back to the extracted copy.
@@ -55,7 +60,11 @@ function simulate(levelText, solutionText, { config, terrain }) {
   const lv = Level.parse(levelText);
   const terrainName = Object.fromEntries(terrain.map((t) => [t.char, t.name]));
   const T = lv.terrain.map((row) => row.slice());
-  const name = (x, y) => (T[y][x] === 'whirlpool' ? 'water_whirlpool' : terrainName[T[y][x]] || 'normal');
+  const name = (x, y) => {
+    if (T[y][x] === 'whirlpool') return 'water_whirlpool';
+    const n = terrainName[T[y][x]] || 'normal';
+    return /^street[0-9]+$/.test(n) ? 'street' : n; // road pieces are all "street"
+  };
   const key = (x, y) => `${x},${y}`;
   const inside = (x, y) => x >= 0 && y >= 0 && x < lv.width && y < lv.height;
 
@@ -136,9 +145,14 @@ function simulate(levelText, solutionText, { config, terrain }) {
   function arrive(u) {
     // Recharge next to a building that recharges this kind of unit.
     for (const o of occupied.values()) {
-      if (o.kind === 'building' && cheb(o, u) === 1 && (def(o.type).recharges || []).includes(u.type)) {
-        if (u.energy < 100) log.push(`  recharged at ${o.type}`);
+      if (o === u || cheb(o, u) !== 1 || o.kind === 'monster') continue;
+      if ((def(o.type).recharges || []).includes(u.type)) {
+        if (u.energy < 100) log.push(`  recharged by ${o.type}`);
         u.energy = 100;
+      }
+      if (o.kind === 'unit' && (def(u.type).recharges || []).includes(o.type)) {
+        if (o.energy < 100) log.push(`  ${u.type} recharged a ${o.type}`);
+        o.energy = 100;
       }
     }
     const p = plans.get(key(u.x, u.y));
@@ -171,7 +185,12 @@ function simulate(levelText, solutionText, { config, terrain }) {
     if (allEnergy.length < energyNeeded) fail(`no energy brick near ${at.x},${at.y}`);
     for (const [c, n] of Object.entries(need)) {
       let left = n;
-      for (const e of nearby) { const t = Math.min(left, e.p.bricks[c] || 0); e.p.bricks[c] -= t; left -= t; }
+      for (const e of nearby) {
+        if (!e.p.bricks[c]) continue; // don't create empty (NaN) entries
+        const t = Math.min(left, e.p.bricks[c]);
+        e.p.bricks[c] -= t;
+        left -= t;
+      }
     }
     let charge = 100;
     if (energyNeeded) {
@@ -197,7 +216,7 @@ function simulate(levelText, solutionText, { config, terrain }) {
         case 'unit': {
           const at = parseXY(args[1]);
           const o = occupied.get(key(at.x, at.y));
-          if (!o || o.kind !== 'unit') fail(`no unit at ${args[1]}`);
+          if (!o || (o.kind !== 'unit' && o.kind !== 'building')) fail(`no unit or building at ${args[1]}`);
           for (const [k, v] of units) if (v === o) units.delete(k);
           units.set(args[0], o);
           break;
@@ -323,19 +342,66 @@ function simulate(levelText, solutionText, { config, terrain }) {
           break;
         }
         case 'fight': {
-          const u = units.get(args[0]) || fail(`unknown unit "${args[0]}"`);
+          const fighters = args[0].split('+').map((id) => units.get(id) || fail(`unknown unit "${id}"`));
           const at = parseXY(args[1]);
           const o = occupied.get(key(at.x, at.y));
           if (!o || o.kind !== 'monster') fail(`no monster at ${args[1]}`);
-          if (!(BEATABLE[u.type] || []).includes(o.type)) fail(`a ${u.type} can't reliably beat a ${o.type}`);
-          const range = u.type === 'guard_tower' ? 2 : 1;
-          if (cheb(u, at) > range) fail(`${u.type} is not close enough to the ${o.type}`);
+          const md = def(o.type);
+          let ours = 0;
+          let worst = Infinity;
+          for (const u of fighters) {
+            const range = (def(u.type).attack_search_range && u.kind === 'building') ? def(u.type).attack_search_range : 1;
+            if (cheb(u, at) > range) fail(`${u.type} is not close enough to the ${o.type}`);
+            const d = dps((def(u.type).attack || {})[o.type], md.shield);
+            if (!d) fail(`a ${u.type} can't attack a ${o.type}`);
+            ours += d;
+            // A robot with a repairbot next to it is fixed up as fast as it's hurt.
+            const repaired = [...occupied.values()].some((r) => r !== u && r.kind === 'unit' && cheb(r, u) === 1 && (def(r.type).recharges || []).includes(u.type));
+            if (!repaired) worst = Math.min(worst, 100 / (dps((md.attack || {}).units, def(u.type).shield) || 1e-9));
+          }
+          const ourTime = 100 / ours;
+          if (!o.frozen && ourTime > WIN_MARGIN * worst) {
+            fail(`${fighters.map((u) => u.type).join(' + ')} would not reliably beat a ${o.type} (${ourTime.toFixed(0)}s to win vs ${worst.toFixed(0)}s to lose)`);
+          }
           occupied.delete(key(at.x, at.y));
           const r = { ...(def(o.type).recipe || {}) };
           const e = r.energy ? [100] : [];
           delete r.energy;
           addPile(at.x, at.y, r, e);
           log.push(`${where}: ${o.type} taken apart`);
+          return;
+        }
+        case 'produce': {
+          // produce <buildingId> <x,y> [color]: factory turns a tree/boulder at
+          // x,y into bricks there; windmill/garage put energy/wheels at x,y;
+          // nursery grows a tree at x,y.
+          const b = units.get(args[0]) || fail(`unknown building "${args[0]}"`);
+          const at = parseXY(args[1]);
+          const d = def(b.type);
+          if (cheb(b, at) !== 1) fail(`${args[1]} is not next to the ${b.type}`);
+          const neighbours = [...piles.entries()].filter(([k]) => { const [x, y] = k.split(',').map(Number); return cheb({ x, y }, b) === 1; });
+          const free = () => !occupied.has(key(at.x, at.y)) && !piles.has(key(at.x, at.y)) && !plans.has(key(at.x, at.y));
+          spend(b, 'make');
+          if (b.type === 'factory') {
+            const color = args[2] || fail('say which colour the factory makes');
+            const o = occupied.get(key(at.x, at.y));
+            if (o && o.kind === 'monster' && o.type === 'boulder') occupied.delete(key(at.x, at.y));
+            else if (TREES.has(name(at.x, at.y))) T[at.y][at.x] = '.';
+            else fail(`no tree or boulder at ${args[1]}`);
+            addPile(at.x, at.y, { [color]: d.makeHowManyBricks || 25 });
+          } else if (b.type === 'windmill') {
+            if (neighbours.some(([, p]) => p.energy.length)) fail('the windmill only makes energy when none is next to it');
+            if (!free()) fail(`${args[1]} is not empty`);
+            addPile(at.x, at.y, {}, [100]);
+          } else if (b.type === 'garage') {
+            if (neighbours.some(([, p]) => p.bricks.wheel > 0)) fail('the garage only makes wheels when none are next to it');
+            if (!free()) fail(`${args[1]} is not empty`);
+            addPile(at.x, at.y, { wheel: d.makeHowManyBricks || 4 });
+          } else if (b.type === 'nursery') {
+            if (!free() || name(at.x, at.y) !== 'normal') fail(`no room for a tree at ${args[1]}`);
+            T[at.y][at.x] = 'T';
+          } else fail(`a ${b.type} doesn't produce anything`);
+          log.push(`${where}: ${b.type} produced, its energy ${b.energy.toFixed(1)}`);
           return;
         }
         case 'freeze': {
@@ -359,7 +425,7 @@ function simulate(levelText, solutionText, { config, terrain }) {
       }
       log.push(`${where}: ok`);
     } catch (e) {
-      throw new Error(`${where}: ${e.message}`);
+      throw Object.assign(new Error(`${where}: ${e.message}`), { log });
     }
   });
   return { log, goals };

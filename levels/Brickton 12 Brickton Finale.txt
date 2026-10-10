@@ -1,0 +1,43 @@
+-- editor-title: Brickton Finale
+[map]
+name=BRICKTON FINALE
+ map=MMMMMMMMMMMMMMMMMMMM
+ map=M***.....w......1..M
+ map=M*a..b...w.......c.M
+ map=M***.....w.........M
+ map=M.....d..w.e.......M
+ map=M.f....g.w.........M
+ map=M.h..i...wj........M
+ map=M....k...w.........M
+ map=M.l......w.........M
+ map=M......m.w...2.....M
+ map=M...n....w..o.p....M
+ map=M........w.........M
+ map=MMMMMMMMMMMMMMMMMMMM
+
+center=3,9
+
+[mapitems]
+a=unit,building,factory
+b=unit,monster,boulder
+c=pile,yellow,25
+d=pile,yellow,15,wheel,6,energy,1
+e=unit,building,gas_station
+f=plan,dozer,1
+g=pile,yellow,25,energy,1
+h=unit,vehicle,buggy
+i=pile,blue,20
+j=unit,monster,scorpion
+k=pile,green,20
+l=unit,vehicle,dumptruck
+m=pile,yellow,25,wheel,4,energy,1
+n=plan,steamshovel,1
+o=pile,white,25
+p=pile,yellow,20
+
+1=bonusgoal,guard_tower
+2=goal,house
+
+[inventory]
+guard_tower=2
+house=1

@@ -83,6 +83,90 @@
       "unlocks": [
         13
       ]
+    },
+    "map2.1": {
+      "level": "Brickton 01 Rush Hour",
+      "title": "Rush Hour",
+      "unlocks": [
+        2
+      ]
+    },
+    "map2.2": {
+      "level": "Brickton 02 Factory Floor",
+      "title": "Factory Floor",
+      "unlocks": [
+        3
+      ]
+    },
+    "map2.3": {
+      "level": "Brickton 03 Tire Trouble",
+      "title": "Tire Trouble",
+      "unlocks": [
+        4
+      ]
+    },
+    "map2.4": {
+      "level": "Brickton 04 Power Outage",
+      "title": "Power Outage",
+      "unlocks": [
+        5
+      ]
+    },
+    "map2.5": {
+      "level": "Brickton 05 Zoo Escape",
+      "title": "Zoo Escape",
+      "unlocks": [
+        6
+      ]
+    },
+    "map2.6": {
+      "level": "Brickton 06 Canal Street",
+      "title": "Canal Street",
+      "unlocks": [
+        7
+      ]
+    },
+    "map2.7": {
+      "level": "Brickton 07 Green Belt",
+      "title": "Green Belt",
+      "unlocks": [
+        8
+      ]
+    },
+    "map2.8": {
+      "level": "Brickton 08 Gridlock",
+      "title": "Gridlock",
+      "unlocks": [
+        9
+      ]
+    },
+    "map2.9": {
+      "level": "Brickton 09 Scorpion Alley",
+      "title": "Scorpion Alley",
+      "unlocks": [
+        10
+      ]
+    },
+    "map2.10": {
+      "level": "Brickton 10 Shark Harbor",
+      "title": "Shark Harbor",
+      "unlocks": [
+        11
+      ]
+    },
+    "map2.11": {
+      "level": "Brickton 11 Lion Bridge",
+      "title": "Lion Bridge",
+      "unlocks": [
+        12
+      ]
+    },
+    "map2.12": {
+      "level": "Brickton 12 Brickton Finale",
+      "title": "Brickton Finale",
+      "unlocks": [
+        13
+      ]
     }
   }
 }

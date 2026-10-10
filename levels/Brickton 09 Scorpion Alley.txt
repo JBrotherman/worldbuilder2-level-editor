@@ -1,0 +1,32 @@
+-- editor-title: Scorpion Alley
+[map]
+name=SCORPION ALLEY
+ map=MMMMMMMMMMMMMMMMMM
+ map=M***.............M
+ map=M*a..b.c.........M
+ map=M***....d********M
+ map=M........*.......M
+ map=M.e.......f..f..1M
+ map=M...g.h..*.......M
+ map=M........*******.M
+ map=M*********......2M
+ map=M*********.......M
+ map=MMMMMMMMMMMMMMMMMM
+
+center=8,3
+
+[mapitems]
+a=unit,building,factory
+b=unit,monster,boulder
+c=unit,vehicle,dozer
+d=pile,yellow,25,energy,1
+e=unit,vehicle,dumptruck
+f=unit,monster,scorpion
+g=pile,yellow,50
+h=unit,building,gas_station
+
+1=goal,dumptruck
+2=bonusgoal,guard_tower
+
+[inventory]
+guard_tower=3
