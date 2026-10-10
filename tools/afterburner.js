@@ -135,6 +135,24 @@ function findAll(movie, tag) { return movie.resources.filter((r) => r.tag === ta
 // Replace the uncompressed contents of a resource (written by serialize()).
 function setChunk(movie, id, data) { movie.overrides.set(id, Buffer.from(data)); }
 
+// Add a new resource and return its id. ILS chunks (cast member headers and
+// tables) are loaded up front; media such as BITD/CLUT goes in the body.
+function addChunk(movie, tag, data, { ils = false } = {}) {
+  const id = movie.abmpUnk2 + 1; // ABMP keeps the highest resource id here
+  const zlibIndex = movie.compressionTypes.findIndex((t) => ZLIB_GUIDS.includes(t.guid));
+  const res = { id, tag, offset: ils ? -1 : 0, compSize: data.length, size: data.length, compType: Math.max(0, zlibIndex) };
+  movie.resources.push(res);
+  movie.byId.set(id, res);
+  movie.abmpUnk2 = id;
+  if (ils) {
+    movie.ilsData.set(id, Buffer.from(data));
+    movie.ilsDirty = true;
+  } else {
+    movie.overrides.set(id, Buffer.from(data));
+  }
+  return id;
+}
+
 // Rebuild the file. Untouched chunks keep their original bytes; overridden
 // chunks are recompressed and appended after the original chunk bodies.
 function serialize(movie) {
@@ -161,7 +179,7 @@ function serialize(movie) {
   }
 
   let body = Buffer.concat([origBody, ...appended]);
-  const ilsTouched = [...movie.overrides.keys()].some((id) => movie.ilsData.has(id));
+  const ilsTouched = movie.ilsDirty || [...movie.overrides.keys()].some((id) => movie.ilsData.has(id));
   if (ilsTouched) {
     // ILS must stay at body offset 0; rebuild it and shift everything else.
     const parts = [];
@@ -198,4 +216,4 @@ function serialize(movie) {
   return Buffer.concat([header, content]);
 }
 
-module.exports = { parse, serialize, chunkData, rawChunk, findAll, setChunk, Reader };
+module.exports = { parse, serialize, chunkData, rawChunk, findAll, setChunk, addChunk, Reader };

@@ -1,5 +1,6 @@
 # Original game files (LEGO's copyrighted assets) - keep local only
 WorldBuilder2/
+WorldBuilder/
 # Generated output
 build/
 extracted/

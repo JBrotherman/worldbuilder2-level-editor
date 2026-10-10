@@ -72,9 +72,10 @@ function build() {
   }
   const levels = game.levelNames(g)
     .filter((id) => id !== 'map999.999')
-    .map((id) => ({ id, title: titles[id] || id }))
+    .map((id) => ({ id, title: titles[id] || id, source: 'wb2' }))
     .sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true }));
-  levels.push({ id: 'map999.999', title: 'Developer test level' });
+  levels.push({ id: 'map999.999', title: 'Developer test level', source: 'wb2' });
+  for (const l of require('./wb1').wb1Levels()) levels.push({ ...l, source: 'wb1' });
   return { config, terrain, levels, game: g };
 }
 

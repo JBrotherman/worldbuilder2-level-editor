@@ -706,9 +706,12 @@
       custom.append(el('li', { onclick: () => { d.close(); openCustom(f.file); } },
         el('span', {}, f.file), el('span', { class: 'id' }, new Date(f.modified).toLocaleString())));
     }
+    let group = null;
     for (const l of catalog.levels) {
+      const g = l.source === 'wb1' ? `WorldBuilder 1 · World ${l.world}` : 'WorldBuilder 2';
+      if (g !== group) { group = g; original.append(el('li', { class: 'group' }, g)); }
       original.append(el('li', { onclick: () => { d.close(); openOriginal(l); } },
-        el('span', {}, l.title), el('span', { class: 'id' }, l.id.replace('map', 'Mission '))));
+        el('span', {}, l.title), el('span', { class: 'id' }, l.id.replace(/^(wb1:)?map/, 'Mission '))));
     }
     d.showModal();
   });

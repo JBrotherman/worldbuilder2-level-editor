@@ -110,3 +110,18 @@ d=whirlpool,1
 [inventory]
 dirtbuggy=2                     plans the player starts with
 ```
+
+## Content from the original WorldBuilder
+
+If the original game is in `WorldBuilder/` (next to `WorldBuilder2/`), the
+editor and every game build also get:
+
+- **Scorpion and T-Rex graphics.** WorldBuilder 2 defines both monsters but
+  only has their "frozen" pictures; WB1's walk and attack animations (and the
+  scorpion's colour palettes) are copied into the game's monster cast library.
+- **WB1's 60 missions** as templates: under **Open** (grouped by world) and as
+  level choices in the **Campaign** tab. Two of them (Build Your Own
+  Battlefield, Monsterland) use map characters WB1 never defined; those
+  become plain ground.
+
+See `tools/wb1.js`.

@@ -12,6 +12,7 @@ const catalog = require('./catalog');
 const { createSpriteStore } = require('./sprites');
 const gameWindow = require('./window');
 const campaign = require('./campaign');
+const wb1 = require('./wb1');
 
 const ROOT = path.join(__dirname, '..');
 const EDITOR_DIR = path.join(ROOT, 'editor');
@@ -133,6 +134,7 @@ async function handle(req, res) {
   if (p === '/api/level') {
     const id = url.searchParams.get('id');
     if (!cat.levels.some((l) => l.id === id)) return json(res, { error: 'unknown level' }, 404);
+    if (id.startsWith('wb1:')) return send(res, 200, wb1.wb1LevelText(id, cat.terrain.map((t) => t.char)), 'text/plain');
     return send(res, 200, game.getText(cat.game, id), 'text/plain');
   }
 

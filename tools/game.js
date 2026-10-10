@@ -11,14 +11,17 @@ const ROOT = path.join(__dirname, '..');
 const GAME_DIR = path.join(ROOT, 'WorldBuilder2', 'worldbuilder2');
 const BUILD_DIR = path.join(ROOT, 'build', 'worldbuilder2');
 
-function load() {
+// extras: also add content from the original WorldBuilder (see wb1.js), when
+// its folder is present.
+function load({ extras = true } = {}) {
   const movie = ab.parse(fs.readFileSync(path.join(GAME_DIR, 'worldbuilder2.dcr')));
+  const added = extras ? require('./wb1').addMissingSprites(movie) : [];
   const textMembers = new Map(); // name -> XMED resource
   for (const m of cast.members(movie).values()) {
     const child = m.children.find((c) => c.tag === 'XMED');
     if (child && m.name) textMembers.set(m.name, movie.byId.get(child.id));
   }
-  return { movie, textMembers };
+  return { movie, textMembers, added };
 }
 
 // Game text uses \r line breaks; we expose \n.

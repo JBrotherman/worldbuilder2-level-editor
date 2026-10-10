@@ -249,3 +249,5 @@ table.attack td:first-child { white-space: nowrap; padding-right: 12px; }
 .add-prop { margin-top: 12px; }
 textarea.raw { width: 100%; font: 12px/1.35 ui-monospace, Consolas, monospace; }
 textarea.raw.bad { border-color: var(--red); }
+.open-list li.group { cursor: default; background: #12141a; color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; position: sticky; top: 0; }
+.open-list li.group:hover { background: #12141a; }

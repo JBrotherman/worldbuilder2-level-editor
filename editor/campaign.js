@@ -80,7 +80,9 @@
 
   async function levelInfo(file) {
     if (levelCache.has(file)) return levelCache.get(file);
-    const res = await fetch(`/api/custom?file=${encodeURIComponent(file)}`);
+    const res = await fetch(file.startsWith('wb1:')
+      ? `/api/level?id=${encodeURIComponent(file)}`
+      : `/api/custom?file=${encodeURIComponent(file)}`);
     const info = res.ok ? { text: await res.text() } : { missing: true };
     if (info.text) {
       info.level = Level.parse(info.text);
@@ -94,6 +96,7 @@
   }
 
   // --- helpers --------------------------------------------------------------
+  const wb1Levels = () => api.catalog.levels.filter((l) => l.source === 'wb1');
   const m = (slot) => missions[slot] || {};
   const unlocksOf = (slot) => m(slot).unlocks || original.unlocks[slot] || [];
   // Same fallback order as tools/campaign.js: own title, the level's title,
@@ -177,8 +180,10 @@
       },
     },
     el('option', { value: '' }, `Original: ${original.titles[slot]}`),
-    files.length ? el('optgroup', { label: 'My levels' }, files.map((f) => el('option', { value: f, selected: f === mm.level }, f))) : null);
-    if (mm.level && !files.includes(mm.level)) levelSelect.append(el('option', { value: mm.level, selected: true }, `${mm.level} (missing!)`));
+    files.length ? el('optgroup', { label: 'My levels' }, files.map((f) => el('option', { value: f, selected: f === mm.level }, f))) : null,
+    wb1Levels().length ? el('optgroup', { label: 'WorldBuilder 1 missions' }, wb1Levels().map((l) =>
+      el('option', { value: l.id, selected: l.id === mm.level }, `WB1 ${l.id.slice(7)}: ${l.title}`))) : null);
+    if (mm.level && !files.includes(mm.level) && !mm.level.startsWith('wb1:')) levelSelect.append(el('option', { value: mm.level, selected: true }, `${mm.level} (missing!)`));
 
     const chips = el('div', { class: 'chips' });
     const unlocks = unlocksOf(slot);
@@ -214,7 +219,7 @@
       el('div', { class: 'unlock-label muted' }, 'When completed, unlocks:'),
       chips,
       el('div', { class: 'row' },
-        mm.level ? el('button', { class: 'small', onclick: () => api.editLevel(mm.level) }, 'Edit level') : null,
+        mm.level && !mm.level.startsWith('wb1:') ? el('button', { class: 'small', onclick: () => api.editLevel(mm.level) }, 'Edit level') : null,
         Object.keys(mm).length ? el('button', { class: 'small', onclick: () => update(slot, { level: null, title: null, unlocks: null }) }, 'Use original') : null));
   }
 

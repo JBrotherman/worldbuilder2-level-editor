@@ -80,7 +80,13 @@ function applyConfig(g) {
   if (text != null) game.setText(g, 'config', text);
 }
 
-function readLevelFile(file) {
+// A level reference is a file in levels/ or a WorldBuilder 1 mission ("wb1:map3.1").
+function readLevelFile(file, terrainChars) {
+  if (file.startsWith('wb1:')) {
+    const text = require('./wb1').wb1LevelText(file, terrainChars);
+    if (text == null) throw new Error(`WorldBuilder 1 mission "${file.slice(4)}" not found (is the WorldBuilder folder there?)`);
+    return text;
+  }
   const p = path.join(LEVELS_DIR, file + '.txt');
   if (!/^[\w\- ]{1,64}$/.test(file) || !fs.existsSync(p)) throw new Error(`Level "${file}" not found in the levels folder`);
   return fs.readFileSync(p, 'latin1');
@@ -95,7 +101,7 @@ function applyCampaign(g, c) {
   for (const [slot, m] of Object.entries(c.missions)) {
     let title = m.title;
     if (m.level) {
-      const level = Level.parse(readLevelFile(m.level));
+      const level = Level.parse(readLevelFile(m.level, terrainChars));
       game.setText(g, slot, Level.gameText(level, terrainChars));
       title = title || level.meta.title || m.level;
     }
