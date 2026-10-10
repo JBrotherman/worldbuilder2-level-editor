@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WorldBuilder 2 Level Editor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brick"></span>WB2 Level Editor</div>
+    <div class="doc">
+      <span id="docName">Untitled</span><span id="dirtyMark" class="dirty" hidden>●</span>
+    </div>
+    <nav class="actions">
+      <button id="btnNew" title="New level">New</button>
+      <button id="btnOpen" title="Open a level (Ctrl+O)">Open</button>
+      <button id="btnSave" title="Save (Ctrl+S)">Save</button>
+      <button id="btnSaveAs" title="Save under a new name">Save as</button>
+      <button id="btnImport" title="Paste level text">Import</button>
+      <span class="sep"></span>
+      <button id="btnPlay" class="primary" title="Build into the game and launch it (F5)">▶ Play in game</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <aside class="palette" id="palette" aria-label="Palette"></aside>
+
+    <section class="stage">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Tools">
+          <button data-tool="paint" title="Paint (P)">✎ Paint</button>
+          <button data-tool="erase" title="Remove items (E) - or right-click">⌫ Erase</button>
+          <button data-tool="pick" title="Pick from map (I)">⌖ Pick</button>
+          <button data-tool="center" title="Set start view centre (C)">◎ Start view</button>
+        </div>
+        <div class="brush" id="brushInfo"></div>
+        <div class="seg" role="group" aria-label="View">
+          <button id="btnUndo" title="Undo (Ctrl+Z)">↶</button>
+          <button id="btnRedo" title="Redo (Ctrl+Y)">↷</button>
+          <button id="btnGrid" title="Toggle grid (G)">Grid</button>
+          <button id="btnZoomOut" title="Zoom out (-)">−</button>
+          <span id="zoomLabel" class="zoom">100%</span>
+          <button id="btnZoomIn" title="Zoom in (+)">+</button>
+        </div>
+      </div>
+      <div class="viewport" id="viewport">
+        <canvas id="map"></canvas>
+      </div>
+      <div class="statusbar" id="statusbar">&nbsp;</div>
+    </section>
+
+    <aside class="inspector">
+      <section class="card">
+        <h2>Level</h2>
+        <label>In-game title <input id="lvTitle" maxlength="40" placeholder="Shown on the world map"></label>
+        <label>Internal name <input id="lvName" maxlength="40"></label>
+        <div class="row">
+          <span class="muted">Size</span> <strong id="lvSize"></strong>
+        </div>
+        <div class="resize">
+          <span>Rows</span>
+          <button data-resize="top+1" title="Add a row at the top">+ top</button>
+          <button data-resize="top-1" title="Remove the top row">− top</button>
+          <button data-resize="bottom+1" title="Add a row at the bottom">+ bottom</button>
+          <button data-resize="bottom-1" title="Remove the bottom row">− bottom</button>
+          <span>Columns</span>
+          <button data-resize="left+1" title="Add a column on the left">+ left</button>
+          <button data-resize="left-1" title="Remove the left column">− left</button>
+          <button data-resize="right+1" title="Add a column on the right">+ right</button>
+          <button data-resize="right-1" title="Remove the right column">− right</button>
+        </div>
+        <div class="row">
+          <span class="muted">Start view</span> <span id="lvCenter"></span>
+          <button id="btnClearCenter" class="small">Clear</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Starting plans</h2>
+        <div id="inventory"></div>
+        <button id="btnAddInv" class="small">+ Add plan</button>
+      </section>
+
+      <section class="card">
+        <h2>Selected tile</h2>
+        <div id="tileInfo" class="muted">Click a tile on the map.</div>
+      </section>
+
+      <section class="card">
+        <h2>Problems <span id="problemCount" class="count"></span></h2>
+        <ul id="problems" class="problems"></ul>
+      </section>
+
+      <section class="card">
+        <details>
+          <summary>Level text</summary>
+          <textarea id="lvText" readonly spellcheck="false"></textarea>
+          <button id="btnCopyText" class="small">Copy</button>
+          <span id="textSize" class="muted"></span>
+        </details>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="dlgNew">
+    <form method="dialog">
+      <h2>New level</h2>
+      <div class="grid2">
+        <label>Width <input name="w" type="number" min="3" max="60" value="16"></label>
+        <label>Height <input name="h" type="number" min="3" max="60" value="12"></label>
+      </div>
+      <label>Fill with
+        <select name="fill"><option value=".">Grass</option><option value="w">Water</option></select>
+      </label>
+      <menu><button value="cancel">Cancel</button><button value="ok" class="primary">Create</button></menu>
+    </form>
+  </dialog>
+
+  <dialog id="dlgOpen">
+    <form method="dialog">
+      <h2>Open level</h2>
+      <div class="open-cols">
+        <div>
+          <h3>My levels</h3>
+          <ul id="openCustom" class="open-list"></ul>
+        </div>
+        <div>
+          <h3>Original missions <span class="muted">(opens as a copy)</span></h3>
+          <ul id="openGame" class="open-list"></ul>
+        </div>
+      </div>
+      <menu><button value="cancel">Close</button></menu>
+    </form>
+  </dialog>
+
+  <dialog id="dlgSaveAs">
+    <form method="dialog">
+      <h2>Save level as</h2>
+      <label>File name <input name="file" pattern="[A-Za-z0-9_\- ]{1,64}" required></label>
+      <p class="muted">Saved to the <code>levels</code> folder as a .txt file.</p>
+      <menu><button value="cancel" formnovalidate>Cancel</button><button value="ok" class="primary">Save</button></menu>
+    </form>
+  </dialog>
+
+  <dialog id="dlgImport">
+    <form method="dialog">
+      <h2>Import level text</h2>
+      <textarea name="text" rows="16" spellcheck="false" placeholder="[map]&#10;name=...&#10; map=...."></textarea>
+      <menu><button value="cancel">Cancel</button><button value="ok" class="primary">Import</button></menu>
+    </form>
+  </dialog>
+
+  <dialog id="dlgConfirm">
+    <form method="dialog">
+      <h2 id="confirmTitle"></h2>
+      <p id="confirmText"></p>
+      <menu><button value="cancel">Cancel</button><button value="ok" class="primary" id="confirmOk">OK</button></menu>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="level.js"></script>
+  <script src="render.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

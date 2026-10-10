@@ -4,3 +4,4 @@ WorldBuilder2/
 build/
 extracted/
 node_modules/
+.claude/
