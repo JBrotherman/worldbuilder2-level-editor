@@ -203,9 +203,10 @@
     }
   }
 
-  function labelled(key, control, { removable, onRemove } = {}) {
+  // size: '' (one column), 'wide' (two columns) or 'full' (whole row).
+  function labelled(key, control, { removable, onRemove, size = '' } = {}) {
     const [label, help] = INFO[key] || [api.pretty(key), ''];
-    return el('div', { class: 'field' },
+    return el('div', { class: `field ${size}`.trim() },
       el('div', { class: 'field-head' },
         el('span', { class: 'field-label' }, label),
         removable ? el('button', { class: 'link', title: 'Remove this property', onclick: onRemove }, 'remove') : null),
@@ -229,12 +230,12 @@
     const remove = { removable: !['name'].includes(key), onRemove: () => { Lingo.set(props, key, undefined); changed(); } };
     const setVal = (v) => Lingo.set(props, key, v);
 
-    if (key === 'recipe' && value.t === 'props') return labelled(key, brickGrid(value), remove);
+    if (key === 'recipe' && value.t === 'props') return labelled(key, brickGrid(value), { ...remove, size: 'wide' });
     if ((key === 'terrain' || key === 'recharges') && value.t === 'list') {
       const choices = key === 'terrain' ? symbolsUsed('terrain') : Object.keys(api.catalog.config.vehicle);
-      return labelled(key, symbolChecks(value, choices, key === 'recharges'), remove);
+      return labelled(key, symbolChecks(value, choices, key === 'recharges'), { ...remove, size: 'wide' });
     }
-    if (key === 'attack' && value.t === 'props') return labelled(key, attackTable(value), remove);
+    if (key === 'attack' && value.t === 'props') return labelled(key, attackTable(value), { ...remove, size: 'full' });
     if (value.t === 'sym' && (value.v === 'yes' || value.v === 'no')) {
       return labelled(key, el('label', { class: 'check' },
         el('input', { type: 'checkbox', checked: value.v === 'yes', onchange: (e) => { setVal(Lingo.sym(e.target.checked ? 'yes' : 'no')); changed(); } }),
@@ -304,7 +305,7 @@
     }
     table.append(body);
     const missing = monsters.filter((mk) => !attack.entries.some((e) => e.key.v === mk));
-    return el('div', {}, table, missing.length ? el('div', { class: 'row' },
+    return el('div', {}, el('div', { class: 'table-scroll' }, table), missing.length ? el('div', { class: 'row' },
       el('select', { id: 'addTarget' }, missing.map((mk) => el('option', { value: mk }, mk === 'units' ? 'All your units' : api.typeName('monster', mk)))),
       el('button', { class: 'small', onclick: () => {
         const template = attack.entries[0] ? JSON.parse(JSON.stringify(attack.entries[0].value))

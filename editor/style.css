@@ -224,23 +224,28 @@ button.link:hover { color: var(--text); background: none; }
 .unit-head img { max-height: 64px; max-width: 80px; }
 .unit-head h1 { margin: 0; font-size: 20px; }
 .unit-head > button { margin-left: auto; }
-.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; align-items: start; }
-.field { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); grid-auto-flow: dense; gap: 10px; align-items: start; }
+.field { min-width: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.field.wide { grid-column: span 2; }
+.field.full { grid-column: 1 / -1; }
+@media (max-width: 860px) { .field.wide { grid-column: auto; } }
 .field-head { display: flex; justify-content: space-between; align-items: baseline; }
 .field-label { font-weight: 600; }
 .field .help { font-size: 12px; }
 .field input:not([type=checkbox]) { max-width: 100%; }
 .sub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
 .sub-grid label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-size: 12px; }
-.brick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.brick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
 .brick-grid label { display: flex; align-items: center; gap: 4px; }
-.brick-grid img { width: 26px; height: 20px; object-fit: contain; }
-.brick-grid input { width: 100%; min-width: 0; }
+.brick-grid img { width: 26px; height: 20px; object-fit: contain; flex: none; }
+.brick-grid input { width: 100%; min-width: 60px; }
 .checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px; }
-table.attack { border-collapse: collapse; width: 100%; font-size: 12px; }
-table.attack th { text-align: left; color: var(--muted); font-weight: 500; padding: 2px 4px; }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+table.attack { border-collapse: collapse; font-size: 12px; }
+table.attack th { text-align: left; color: var(--muted); font-weight: 500; padding: 2px 8px 4px 4px; white-space: nowrap; }
 table.attack td { padding: 2px 4px; }
-table.attack input { width: 62px; }
+table.attack input { width: 76px; }
+table.attack td:first-child { white-space: nowrap; padding-right: 12px; }
 .add-prop { margin-top: 12px; }
 textarea.raw { width: 100%; font: 12px/1.35 ui-monospace, Consolas, monospace; }
 textarea.raw.bad { border-color: var(--red); }
