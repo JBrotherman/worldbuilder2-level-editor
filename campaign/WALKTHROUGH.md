@@ -77,9 +77,9 @@ across and rebuild it with the energy brick on the east island.
 ### 9. Running on Empty — *energy management*
 **Hint:** you can build a gas station of your own.
 **Solution:** build a gas station in the little alcove near the end of the
-road (the bricks are there). Haul the white bricks, then the red and
-yellow bricks to the goal, recharging at the stations, and build the garage
-on the goal (its energy brick is already there).
+road (the bricks are there). Haul the white bricks, then the red bricks,
+wheels and energy brick to the goal, recharging at the stations, and build
+the windmill on the goal.
 **Bonus:** take the dumptruck apart next to the red bricks by the goal and
 build a buggy.
 

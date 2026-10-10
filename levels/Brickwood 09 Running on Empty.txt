@@ -8,7 +8,7 @@ name=RUNNING ON EMPTY
  map=M.MMMMMMMMMMMMMMMM
  map=M........e......1M
  map=MMMMMMMM.MMMMMMM.M
- map=Mf2..g...........M
+ map=M.2..f...........M
  map=MMMMMMMMMMMMMMMMMM
 
 center=3,2
@@ -17,15 +17,14 @@ center=3,2
 a=unit,building,gas_station
 b=unit,vehicle,dumptruck
 c=pile,white,25
-d=pile,red,15,yellow,10
+d=pile,red,15,wheel,5,energy,1
 e=pile,red,40,green,5
-f=pile,energy,1
-g=pile,red,10
+f=pile,red,10
 
 1=bonusgoal,buggy
-2=goal,garage
+2=goal,windmill
 
 [inventory]
-garage=1
+windmill=1
 gas_station=1
 buggy=1

@@ -387,22 +387,21 @@ module.exports = [
       'M.MMMMMMMMMMMMMMMM',
       'M........e.......M',
       'MMMMMMMM.MMMMMMM.M',
-      'Mj1..h...........M',
+      'M.1..h...........M',
       'MMMMMMMMMMMMMMMMMM',
     ],
     items: {
       a: 'unit,vehicle,dumptruck',
       c: 'pile,white,25',
-      d: 'pile,red,15,yellow,10',
+      d: 'pile,red,15,wheel,5,energy,1',
       e: 'pile,red,40,green,5',
       h: 'pile,red,10',
       i: 'unit,building,gas_station',
-      j: 'pile,energy,1',
-      1: 'goal,garage',
+      1: 'goal,windmill',
       2: 'bonusgoal,buggy',
     },
     extra: { 2: [16, 5] },
-    inventory: { garage: 1, gas_station: 1, buggy: 1 },
+    inventory: { windmill: 1, gas_station: 1, buggy: 1 },
     solution: `
       unit dt 2,1
       build gas_station 8,6 st   # in the little alcove near the end
@@ -413,13 +412,13 @@ module.exports = [
       unload dt 3,7
       move dt 8,5           # recharge
       move dt 6,1
-      load dt 5,1           # red and yellow
+      load dt 5,1           # red, wheels, energy
       move dt 2,1           # recharge at the start station
       move dt 8,5           # recharge
       move dt 3,7
       unload dt 3,7
       move dt 4,7
-      build garage 2,7      # the energy brick is already waiting there
+      build windmill 2,7
       goal
       move dt 5,7
       apart dt
