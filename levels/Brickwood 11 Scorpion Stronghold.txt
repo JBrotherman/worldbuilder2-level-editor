@@ -1,0 +1,28 @@
+-- editor-title: Scorpion Stronghold
+[map]
+name=SCORPION STRONGHOLD
+ map=MMMMMMMMMMMMMMMMMM
+ map=M.a......%.....b1M
+ map=M..c.....%.......M
+ map=M........%.......M
+ map=M......d.%...e...M
+ map=M.........e......M
+ map=M......b.%.......M
+ map=M........%.......M
+ map=M........%.....2.M
+ map=M%.......%.*....?M
+ map=MMMMMMMMMMMMMMMMMM
+
+center=3,2
+
+[mapitems]
+a=unit,vehicle,dumptruck
+b=pile,yellow,25,energy,1
+c=plan,guard_tower,3
+d=pile,red,25,yellow,25,energy,1
+e=unit,monster,scorpion
+
+1=bonusgoal,guard_tower
+2=goal,dumptruck
+
+[inventory]

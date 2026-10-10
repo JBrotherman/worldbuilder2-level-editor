@@ -1,0 +1,25 @@
+-- editor-title: Treebot Trail
+[map]
+name=TREEBOT TRAIL
+ map=MMMMMMMMMMMMMMMM
+ map=M.a....TTTT...?M
+ map=M..b...TTTT..1.M
+ map=M......T.TT....M
+ map=M.c....TTTT....M
+ map=M.......T.T....M
+ map=M......TTTT.TTTM
+ map=M......TTTT.T2TM
+ map=M%.....TTTT.TTTM
+ map=MMMMMMMMMMMMMMMM
+
+center=3,2
+
+[mapitems]
+a=unit,vehicle,buggy
+b=plan,treebot,1
+c=pile,green,20,blue,25,energy,1
+
+1=goal,buggy
+2=bonusgoal,treebot
+
+[inventory]

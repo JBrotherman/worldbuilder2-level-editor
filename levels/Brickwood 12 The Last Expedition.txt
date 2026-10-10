@@ -1,0 +1,39 @@
+-- editor-title: The Last Expedition
+[map]
+name=THE LAST EXPEDITION
+ map=MMMMMMMMMMMMMMMMMMMMMM
+ map=M.a...TTT?....www.b.1M
+ map=M..c..TTT...d.www....M
+ map=M.....TTT..e..www..f.M
+ map=M.g...TTT.....www...*M
+ map=M......TT.....www....M
+ map=M.....TTT.....www.h.iM
+ map=M.....T.T.....www..2.M
+ map=M.....TTT.....www.j.kM
+ map=M.....TTT.....www....M
+ map=M.....TTT.lm..www...nM
+ map=M%....TTT....&www%...M
+ map=MMMMMMMMMMMMMMMMMMMMMM
+
+center=3,2
+
+[mapitems]
+a=unit,vehicle,dirtbuggy
+b=plan,snail,1
+c=plan,treebot,1
+d=plan,steamshovel,1
+e=pile,yellow,15,energy,1
+f=unit,monster,crab
+g=pile,green,20,blue,25,energy,1
+h=pile,blue,20
+i=pile,green,20
+j=pile,yellow,20
+k=pile,white,25
+l=plan,defender,1
+m=pile,blue,40,yellow,25,energy,1
+n=plan,house,1
+
+1=bonusgoal,snail
+2=goal,house
+
+[inventory]

@@ -1,0 +1,25 @@
+-- editor-title: Rocky Road
+[map]
+name=ROCKY ROAD
+ map=MMMMMMMMMMMMMM
+ map=M*...T..__.?.M
+ map=M.a.....__.b.M
+ map=M..c....__...M
+ map=M.......__..1M
+ map=M.d..T..__...M
+ map=M.......__wwwM
+ map=M&......__w2wM
+ map=MMMMMMMMMMMMMM
+
+center=3,3
+
+[mapitems]
+a=unit,vehicle,buggy
+b=plan,duck,1
+c=plan,dirtbuggy,1
+d=pile,yellow,10
+
+1=goal,dirtbuggy
+2=bonusgoal,duck,water
+
+[inventory]

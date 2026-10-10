@@ -1,0 +1,88 @@
+{
+  "missions": {
+    "map1.1": {
+      "level": "Brickwood 01 First Bricks",
+      "title": "First Bricks",
+      "unlocks": [
+        2
+      ]
+    },
+    "map1.2": {
+      "level": "Brickwood 02 Rocky Road",
+      "title": "Rocky Road",
+      "unlocks": [
+        3
+      ]
+    },
+    "map1.3": {
+      "level": "Brickwood 03 Heavy Lifting",
+      "title": "Heavy Lifting",
+      "unlocks": [
+        4
+      ]
+    },
+    "map1.4": {
+      "level": "Brickwood 04 Bridge Builder",
+      "title": "Bridge Builder",
+      "unlocks": [
+        5
+      ]
+    },
+    "map1.5": {
+      "level": "Brickwood 05 Crab Cove",
+      "title": "Crab Cove",
+      "unlocks": [
+        6
+      ]
+    },
+    "map1.6": {
+      "level": "Brickwood 06 Treebot Trail",
+      "title": "Treebot Trail",
+      "unlocks": [
+        7
+      ]
+    },
+    "map1.7": {
+      "level": "Brickwood 07 Boulder Pass",
+      "title": "Boulder Pass",
+      "unlocks": [
+        8
+      ]
+    },
+    "map1.8": {
+      "level": "Brickwood 08 Island Hopping",
+      "title": "Island Hopping",
+      "unlocks": [
+        9
+      ]
+    },
+    "map1.9": {
+      "level": "Brickwood 09 Running on Empty",
+      "title": "Running on Empty",
+      "unlocks": [
+        10
+      ]
+    },
+    "map1.10": {
+      "level": "Brickwood 10 Frozen Fury",
+      "title": "Frozen Fury",
+      "unlocks": [
+        11
+      ]
+    },
+    "map1.11": {
+      "level": "Brickwood 11 Scorpion Stronghold",
+      "title": "Scorpion Stronghold",
+      "unlocks": [
+        12
+      ]
+    },
+    "map1.12": {
+      "level": "Brickwood 12 The Last Expedition",
+      "title": "The Last Expedition",
+      "unlocks": [
+        13
+      ]
+    }
+  }
+}

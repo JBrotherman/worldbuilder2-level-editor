@@ -1,0 +1,27 @@
+-- editor-title: Frozen Fury
+[map]
+name=FROZEN FURY
+ map=MMMMMMMMMMMMMMMMMM
+ map=M.a..MMMMMMMMM...M
+ map=M..b.MMMMMMMMM.1.M
+ map=M................M
+ map=M.c........d.....M
+ map=M................M
+ map=M.ef.MMMMMM.MM...M
+ map=M...&MMMMMM2MM%.*M
+ map=MMMMMMMMMMMMMMMMMM
+
+center=3,2
+
+[mapitems]
+a=unit,vehicle,buggy
+b=plan,freezebot,1
+c=pile,blue,5,red,5,white,10,yellow,25,energy,1
+d=unit,monster,trex
+e=pile,yellow,15,wheel,6,energy,1
+f=plan,dozer,1
+
+1=goal,buggy
+2=bonusgoal,collect 1 trex
+
+[inventory]

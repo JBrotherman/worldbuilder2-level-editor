@@ -1,0 +1,26 @@
+-- editor-title: Bridge Builder
+[map]
+name=BRIDGE BUILDER
+ map=MMMMMMMMMMMMMM
+ map=M*....www...?M
+ map=M.a...www..1.M
+ map=M..b..www....M
+ map=M.....www.c..M
+ map=M.d...www.T.%M
+ map=M.....www..e.M
+ map=M..T..www...2M
+ map=MMMMMMMMMMMMMM
+
+center=3,3
+
+[mapitems]
+a=unit,vehicle,buggy
+b=plan,steamshovel,1
+c=plan,buggy,1
+d=pile,yellow,25
+e=pile,red,10
+
+1=goal,anything
+2=bonusgoal,buggy
+
+[inventory]

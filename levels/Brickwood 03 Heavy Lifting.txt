@@ -1,0 +1,31 @@
+-- editor-title: Heavy Lifting
+[map]
+name=HEAVY LIFTING
+ map=MMMMMMMMMMMMMMMM
+ map=M.a....T....b.*M
+ map=M..............M
+ map=M.c..d.T..TT...M
+ map=M.......1......M
+ map=M..e...T.......M
+ map=M&..........f..M
+ map=MT..g....TT....M
+ map=M.......h...i.2M
+ map=MMMMMMMMMMMMMMMM
+
+center=3,4
+
+[mapitems]
+a=pile,blue,20
+b=pile,yellow,20
+c=unit,vehicle,dumptruck
+d=unit,building,gas_station
+e=pile,green,20
+f=pile,white,25
+g=plan,house,1
+h=plan,forklift,1
+i=pile,red,15
+
+1=goal,house
+2=bonusgoal,forklift
+
+[inventory]

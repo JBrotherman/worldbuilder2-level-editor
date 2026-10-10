@@ -1,0 +1,25 @@
+-- editor-title: Boulder Pass
+[map]
+name=BOULDER PASS
+ map=MMMMMMMMMMMMMMMM
+ map=M.....*MMMMMM1MM
+ map=M.a....MMMMM.b.M
+ map=M..c...MMMMM.d.M
+ map=M.e.....b......M
+ map=M......MMMMMwwwM
+ map=M%.....MMMMMw2wM
+ map=MMMMMMMMMMMMMMMM
+
+center=3,3
+
+[mapitems]
+a=unit,vehicle,dumptruck
+b=unit,monster,boulder
+c=plan,dozer,1
+d=plan,duck,1
+e=pile,energy,1
+
+1=goal,anything
+2=bonusgoal,duck,water
+
+[inventory]

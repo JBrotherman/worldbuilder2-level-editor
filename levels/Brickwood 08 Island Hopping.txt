@@ -1,0 +1,32 @@
+-- editor-title: Island Hopping
+[map]
+name=ISLAND HOPPING
+ map=MMMMMMMMMMMMMMMM
+ map=M....wwxxxww..?M
+ map=M.a..wbxxxww.1.M
+ map=M....wwxcxww...M
+ map=M....wwxxxww...M
+ map=M....dwxxxww..%M
+ map=M.e..wwxxxww...M
+ map=M...fwgxxxww.h.M
+ map=M....wwxxxww.h.M
+ map=M?...wwxxxww.2.M
+ map=MMMMMMMMMMMMMMMM
+
+center=3,3
+
+[mapitems]
+a=unit,vehicle,duck
+b=waterplan,fish,1
+c=waterplan,tugboat,1
+d=waterpile,blue,5,energy,1
+e=plan,snail,1
+f=pile,red,5
+g=waterpile,blue,15,energy,1
+h=pile,energy,1
+
+1=goal,snail
+2=bonusgoal,duck
+
+[inventory]
+duck=1
