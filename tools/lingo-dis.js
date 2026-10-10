@@ -95,7 +95,7 @@ module.exports = { disassemble, lscrNames, readNames };
 
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const file = args[0] && args[0].endsWith('.dcr') ? args.shift() : path.join(__dirname, '..', 'WorldBuilder2', 'worldbuilder2', 'worldbuilder2.dcr');
+  const file = args[0] && args[0].endsWith('.dcr') ? args.shift() : require('./paths').wb2Dcr();
   const filter = args.join(' ');
   const movie = ab.parse(fs.readFileSync(file));
   const namesFor = lscrNames(movie);

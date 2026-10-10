@@ -3,15 +3,13 @@
 // level templates.
 'use strict';
 const fs = require('fs');
-const path = require('path');
 const ab = require('./afterburner');
 const cast = require('./cast');
 const xmed = require('./xmed');
 const bm = require('./bitmap');
 const { castLibs, libraryWriter } = require('./castedit');
+const paths = require('./paths');
 
-const ROOT = path.join(__dirname, '..');
-const WB1_DCR = path.join(ROOT, 'WorldBuilder', 'worldbuilder', 'worldbuilder.dcr');
 
 // WB2's config defines these monsters but its movie only has "frozen"
 // pictures of them; WB1 has the full walk/attack animations.
@@ -23,8 +21,9 @@ let wb1Cache;
 function loadWb1() {
   if (wb1Cache !== undefined) return wb1Cache;
   wb1Cache = null;
-  if (fs.existsSync(WB1_DCR)) {
-    const movie = ab.parse(fs.readFileSync(WB1_DCR));
+  const dcr = paths.wb1Dcr();
+  if (fs.existsSync(dcr)) {
+    const movie = ab.parse(fs.readFileSync(dcr));
     wb1Cache = { movie, members: cast.members(movie) };
   }
   return wb1Cache;

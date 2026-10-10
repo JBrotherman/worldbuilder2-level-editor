@@ -38,7 +38,13 @@ module.exports = { ensureWrapper, launch };
 
 // CLI: node tools/window.js [path\to\Launcher.exe]
 if (require.main === module) {
-  const target = process.argv[2] || path.join(ROOT, 'WorldBuilder2', 'worldbuilder2', 'Launcher.exe');
-  const { scaled } = launch(path.resolve(target));
+  const target = path.resolve(process.argv[2] || path.join(require('./paths').wb2Dir(), 'Launcher.exe'));
+  if (!fs.existsSync(target)) {
+    console.error(`WorldBuilder 2 was not found at:\n  ${target}\n\n` +
+      'Put your copy of the game in a "WorldBuilder2" folder next to this file,\n' +
+      'or set its location in settings.json (see README.md, "Getting started").');
+    process.exit(1);
+  }
+  const { scaled } = launch(target);
   if (!scaled) console.log('Scaled window unavailable; started the game at its normal size.');
 }

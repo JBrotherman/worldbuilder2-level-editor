@@ -6,15 +6,19 @@ const path = require('path');
 const ab = require('./afterburner');
 const cast = require('./cast');
 const xmed = require('./xmed');
+const paths = require('./paths');
 
 const ROOT = path.join(__dirname, '..');
-const GAME_DIR = path.join(ROOT, 'WorldBuilder2', 'worldbuilder2');
 const BUILD_DIR = path.join(ROOT, 'build', 'worldbuilder2');
+
+// The WorldBuilder 2 folder (see paths.js). Read on every load, so a newly
+// configured location is picked up without a restart.
+const gameDir = () => paths.wb2Dir();
 
 // extras: also add content from the original WorldBuilder (see wb1.js), when
 // its folder is present.
 function load({ extras = true } = {}) {
-  const movie = ab.parse(fs.readFileSync(path.join(GAME_DIR, 'worldbuilder2.dcr')));
+  const movie = ab.parse(fs.readFileSync(path.join(gameDir(), 'worldbuilder2.dcr')));
   const added = [...require('./fixes').applyFixes(movie), ...(extras ? require('./wb1').addMissingSprites(movie) : [])];
   const textMembers = new Map(); // name -> XMED resource
   for (const m of cast.members(movie).values()) {
@@ -65,12 +69,13 @@ function patchProjector(exe, movieBuf) {
 // Write a full playable copy of the game folder with the patched movie.
 function writeBuild(game, outDir = BUILD_DIR) {
   fs.mkdirSync(outDir, { recursive: true });
-  fs.cpSync(GAME_DIR, outDir, { recursive: true });
+  const src = gameDir();
+  fs.cpSync(src, outDir, { recursive: true });
   const movieBuf = ab.serialize(game.movie);
   fs.writeFileSync(path.join(outDir, 'worldbuilder2.dcr'), movieBuf);
-  const exe = fs.readFileSync(path.join(GAME_DIR, 'Launcher.exe'));
+  const exe = fs.readFileSync(path.join(src, 'Launcher.exe'));
   fs.writeFileSync(path.join(outDir, 'Launcher.exe'), patchProjector(exe, movieBuf));
   return outDir;
 }
 
-module.exports = { load, getText, setText, levelNames, writeBuild, GAME_DIR, BUILD_DIR };
+module.exports = { load, getText, setText, levelNames, writeBuild, gameDir, BUILD_DIR };

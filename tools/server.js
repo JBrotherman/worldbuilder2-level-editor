@@ -13,6 +13,7 @@ const { createSpriteStore } = require('./sprites');
 const gameWindow = require('./window');
 const campaign = require('./campaign');
 const wb1 = require('./wb1');
+const paths = require('./paths');
 
 const ROOT = path.join(__dirname, '..');
 const EDITOR_DIR = path.join(ROOT, 'editor');
@@ -22,14 +23,35 @@ const OPEN_BROWSER = process.argv.includes('--open');
 // The game always unlocks mission 1.1, so custom levels are played there.
 const PLAY_SLOT = 'map1.1';
 
-const cat = catalog.build();
-const sprites = createSpriteStore(cat.game.movie);
-const spriteInfo = sprites.info();
-const originalConfig = game.getText(cat.game, 'config');
+// The game is loaded on first use, so the editor can start (and explain what
+// to do) when WorldBuilder 2 isn't there yet.
+let loaded = null; // { cat, sprites, spriteInfo, originalConfig }
+let loadError = null;
+function loadGame({ retry = false } = {}) {
+  if (loaded || (loadError && !retry)) return loaded;
+  loadError = null;
+  const status = paths.wb2Status();
+  if (!status.found) return null;
+  try {
+    const cat = catalog.build();
+    const sprites = createSpriteStore(cat.game.movie);
+    loaded = { cat, sprites, spriteInfo: sprites.info(), originalConfig: game.getText(cat.game, 'config') };
+    console.log(`Loaded WorldBuilder 2 from ${path.dirname(status.dcr)}`);
+  } catch (e) {
+    loadError = `${status.dcr} could not be read as WorldBuilder 2 (${e.message}).`;
+    console.error(loadError);
+  }
+  return loaded;
+}
+
+function setupStatus() {
+  const status = paths.wb2Status();
+  return { ...status, loaded: !!loaded, loadError, wb1Found: fs.existsSync(paths.wb1Dcr()), root: ROOT };
+}
 
 // Rebuilt whenever the tuned config changes, so level checks use it.
 let catalogJson = null;
-function getCatalogJson() {
+function getCatalogJson({ cat, spriteInfo, originalConfig }) {
   if (!catalogJson) {
     const tuned = campaign.loadConfigOverride();
     catalogJson = JSON.stringify({
@@ -101,7 +123,46 @@ async function handle(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const p = decodeURIComponent(url.pathname);
 
-  if (p === '/api/catalog') return send(res, 200, getCatalogJson());
+  // Lets a newly started editor replace this one. The custom header can't be
+  // sent cross-origin without a CORS preflight, which we never approve, so
+  // web pages can't trigger it.
+  if (p === '/api/shutdown' && req.method === 'POST' && req.headers['x-wb2-editor'] === '1') {
+    json(res, { ok: true });
+    console.log('Another editor window took over. This one is closing.');
+    setTimeout(() => process.exit(0), 100);
+    return;
+  }
+
+  // Setup page: where the game is, and setting its location.
+  if (p === '/api/setup') {
+    if (req.method === 'GET') {
+      loadGame({ retry: url.searchParams.has('retry') });
+      return json(res, setupStatus());
+    }
+    // Same custom-header guard as /api/shutdown: web pages can't send it.
+    if (req.method === 'POST' && req.headers['x-wb2-editor'] === '1') {
+      const { worldBuilder2 } = JSON.parse(await readBody(req) || '{}');
+      const dir = typeof worldBuilder2 === 'string' ? worldBuilder2.trim().replace(/^"(.*)"$/, '$1') : '';
+      if (!dir) return json(res, { error: 'Enter a folder.' }, 400);
+      if (!path.isAbsolute(dir) || !paths.locateWb2(dir)) {
+        return json(res, { error: `There is no worldbuilder2.dcr in "${dir}" or its worldbuilder2 subfolder.` }, 400);
+      }
+      paths.writeSettings({ worldBuilder2: dir });
+      loadGame({ retry: true });
+      return json(res, setupStatus());
+    }
+  }
+
+  const g = loadGame({ retry: p === '/' });
+  if (!g) {
+    if (p === '/' || p === '/index.html') return send(res, 200, fs.readFileSync(path.join(EDITOR_DIR, 'setup.html')), 'text/html');
+    if (p.startsWith('/api/') || p.startsWith('/sprite/')) {
+      return json(res, { error: 'WorldBuilder 2 was not found. Reload the editor page to see how to set it up.' }, 503);
+    }
+  }
+  const { cat, sprites, originalConfig } = g || {};
+
+  if (p === '/api/catalog') return send(res, 200, getCatalogJson(g));
 
   if (p === '/api/campaign') {
     if (req.method === 'GET') {
@@ -163,16 +224,6 @@ async function handle(req, res) {
       if (fs.existsSync(file)) fs.unlinkSync(file);
       return json(res, { ok: true });
     }
-  }
-
-  // Lets a newly started editor replace this one. The custom header can't be
-  // sent cross-origin without a CORS preflight, which we never approve, so
-  // web pages can't trigger it.
-  if (p === '/api/shutdown' && req.method === 'POST' && req.headers['x-wb2-editor'] === '1') {
-    json(res, { ok: true });
-    console.log('Another editor window took over. This one is closing.');
-    setTimeout(() => process.exit(0), 100);
-    return;
   }
 
   if (p === '/api/play' && req.method === 'POST') {
@@ -239,6 +290,12 @@ async function replaceRunningEditor(port) {
   }
   const url = `http://localhost:${port}/`;
   console.log(`WorldBuilder 2 level editor: ${url}  (close this window to stop it)`);
+  if (!loadGame()) {
+    const { dcr } = paths.wb2Status();
+    console.log(`
+WorldBuilder 2 was not found (looked for ${dcr}).
+The editor page explains where to put the game.`);
+  }
   if (OPEN_BROWSER) spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
 })().catch((e) => {
   console.error(`Could not start the editor: ${e.message}`);

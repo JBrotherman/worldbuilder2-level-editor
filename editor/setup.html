@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set up the WB2 Level Editor</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { overflow: auto; display: block; }
+    main { max-width: 680px; margin: 0 auto; padding: 32px 16px 48px; font-size: 14px; line-height: 1.55; }
+    h1 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+    h2 { font-size: 15px; margin: 28px 0 8px; }
+    .lead { color: var(--muted); margin: 0 0 20px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+    .card.bad { border-color: var(--red); }
+    code, .path { font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; background: var(--panel-2); border-radius: 4px; padding: 1px 5px; word-break: break-all; }
+    pre { background: var(--panel-2); border-radius: 6px; padding: 10px 12px; overflow-x: auto; font-size: 13px; margin: 8px 0; }
+    ol { padding-left: 22px; margin: 6px 0; }
+    li { margin: 4px 0; }
+    form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    form input { flex: 1 1 260px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+    #msg { margin-top: 8px; min-height: 1.5em; }
+    #msg.error { color: var(--red); }
+    #msg.ok { color: #6fd47a; }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1><span class="brick"></span>WorldBuilder 2 not found</h1>
+    <p class="lead">The editor uses your own copy of LEGO WorldBuilder 2 for its pictures, levels and to play your levels. It isn't included, so tell the editor where it is.</p>
+
+    <div class="card bad" id="status">Looking for the game…</div>
+
+    <h2>Option 1: put the game next to the editor</h2>
+    <p>Copy your <code>WorldBuilder2</code> folder into the editor's folder, so that this file exists:</p>
+    <pre id="expected">…\WorldBuilder2\worldbuilder2\worldbuilder2.dcr</pre>
+    <p>Then <button id="retry" class="small">Check again</button></p>
+
+    <h2>Option 2: point to where the game is</h2>
+    <p>Paste the full path of your WorldBuilder 2 folder (tip: in Explorer, Shift + right-click the folder and choose <em>Copy as path</em>).</p>
+    <form id="pathForm">
+      <input id="pathInput" type="text" placeholder="D:\Games\WorldBuilder2" spellcheck="false" autocomplete="off" aria-label="WorldBuilder 2 folder">
+      <button type="submit" class="primary">Use this folder</button>
+    </form>
+    <div id="msg" role="status"></div>
+    <p class="muted">This is saved in <code id="settingsFile">settings.json</code>, which you can also edit by hand:</p>
+    <pre>{
+  "worldBuilder2": "D:/Games/WorldBuilder2",
+  "worldBuilder1": "D:/Games/WorldBuilder"
+}</pre>
+    <p class="muted"><code>worldBuilder1</code> is optional: the original LEGO WorldBuilder adds the scorpion and T-Rex animations and its 60 missions as templates. Without a setting, a <code>WorldBuilder</code> folder next to <code>WorldBuilder2</code> is used if it's there.</p>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function show(s) {
+      if (s.loaded) {
+        $('status').className = 'card';
+        $('status').textContent = 'Found it! Opening the editor…';
+        setTimeout(() => location.replace('/'), 600);
+        return;
+      }
+      const lines = [];
+      if (s.settingsError) lines.push(s.settingsError);
+      if (s.loadError) lines.push(s.loadError);
+      else lines.push(`The game file was not found at ${s.dcr}`);
+      if (s.configured) lines.push(`(settings.json points to "${s.configured}".)`);
+      $('status').className = 'card bad';
+      $('status').textContent = lines.join(' ');
+      $('expected').textContent = `${s.defaultDir}\\worldbuilder2\\worldbuilder2.dcr`;
+      $('settingsFile').textContent = s.settingsFile;
+    }
+
+    async function check(retry) {
+      const res = await fetch('/api/setup' + (retry ? '?retry' : ''));
+      show(await res.json());
+    }
+
+    $('retry').addEventListener('click', () => check(true));
+
+    $('pathForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('msg').className = '';
+      $('msg').textContent = 'Checking…';
+      const res = await fetch('/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WB2-Editor': '1' },
+        body: JSON.stringify({ worldBuilder2: $('pathInput').value }),
+      });
+      const s = await res.json();
+      if (s.error) {
+        $('msg').className = 'error';
+        $('msg').textContent = s.error;
+        return;
+      }
+      $('msg').className = 'ok';
+      $('msg').textContent = 'Saved.';
+      show(s);
+    });
+
+    check(false).catch(() => {
+      $('status').textContent = 'The editor server is not running. Start it with "Start Editor.bat".';
+    });
+  </script>
+</body>
+</html>

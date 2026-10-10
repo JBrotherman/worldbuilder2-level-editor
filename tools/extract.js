@@ -7,9 +7,10 @@ const path = require('path');
 const ab = require('./afterburner');
 const cast = require('./cast');
 const xmed = require('./xmed');
+const paths = require('./paths');
 
 const root = path.join(__dirname, '..');
-const src = process.argv[2] || path.join(root, 'WorldBuilder2/worldbuilder2/worldbuilder2.dcr');
+const src = process.argv[2] || paths.wb2Dcr();
 const outDir = process.argv[3] || path.join(root, 'extracted');
 
 const movie = ab.parse(fs.readFileSync(src));
