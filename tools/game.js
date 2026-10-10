@@ -28,11 +28,20 @@ function getText(game, name) {
   return xmed.readText(ab.chunkData(game.movie, res)).replace(/\r/g, '\n');
 }
 
+// Members whose text is only read by the game's scripts, never shown, may be
+// longer than a level.
+const LONG_TEXT_MEMBERS = new Set(['config']);
+
 function setText(game, name, text) {
   const res = game.textMembers.get(name);
   if (!res) throw new Error(`no text member "${name}"`);
   const raw = text.replace(/\r\n?/g, '\n').replace(/\n/g, '\r');
-  ab.setChunk(game.movie, res.id, xmed.replaceText(ab.chunkData(game.movie, res), raw));
+  let current = ab.chunkData(game.movie, res);
+  // Long texts are stored in several parts with cached word-wrap layout. We
+  // write them as one part, using a single-part text member as the template.
+  if (xmed.isMultiPart(current)) current = ab.chunkData(game.movie, game.textMembers.get('map1.1'));
+  const maxLength = LONG_TEXT_MEMBERS.has(name) ? 32000 : undefined;
+  ab.setChunk(game.movie, res.id, xmed.replaceText(current, raw, { maxLength }));
 }
 
 function levelNames(game) {

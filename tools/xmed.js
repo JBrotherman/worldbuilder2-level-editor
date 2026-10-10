@@ -61,10 +61,16 @@ function layout(text) {
   return { lines, height: text.split('\r').length * LINE_HEIGHT };
 }
 
+function isMultiPart(buf) {
+  return parseSections(buf.toString('latin1')).filter((s) => s.id === '0002').length > 1;
+}
+
 // Return a new XMED buffer with the text replaced. `text` uses \r line breaks.
-function replaceText(buf, text) {
+// maxLength: levels stay within MAX_TEXT; the config text (only ever read by
+// the game, never displayed) is allowed to be longer.
+function replaceText(buf, text, { maxLength = MAX_TEXT } = {}) {
   if (/[^\x00-\xff]/.test(text)) throw new Error('text must be latin1');
-  if (text.length > MAX_TEXT) throw new Error(`text too long (${text.length} > ${MAX_TEXT} chars)`);
+  if (text.length > maxLength) throw new Error(`text too long (${text.length} > ${maxLength} chars)`);
   const sections = parseSections(buf.toString('latin1'));
   if (sections.filter((s) => s.id === '0002').length !== 1) throw new Error('multi-part text members not supported');
   const oldL = readTextSection(sections.find((s) => s.id === '0002').data).length;
@@ -108,4 +114,4 @@ function replaceText(buf, text) {
   return Buffer.from(buildSections(sections), 'latin1');
 }
 
-module.exports = { readText, replaceText, parseSections };
+module.exports = { readText, replaceText, parseSections, isMultiPart, MAX_TEXT };

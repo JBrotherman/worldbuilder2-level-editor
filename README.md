@@ -31,6 +31,31 @@ Keep the black window open while you edit. Closing it stops the editor.
 
 Units and plans placed on water automatically use their water version.
 
+- **Share:** gives a share code (`WB2:…`) to send to someone, or a level file
+  to download. **Import** accepts a share code, level text or a file.
+
+## Campaign tab
+
+Choose a level for each of the 24 missions (or keep the original), give it a
+title, and click the numbers to choose which missions it unlocks when
+completed. Missions nothing unlocks are flagged as unreachable. Mission 1 of
+each world is always open; World 2 opens after every World 1 mission is done.
+
+**Play campaign** builds the whole campaign into `build/campaign/` and starts
+it. Options: start with fresh progress, or unlock (complete) every mission for
+testing. **Export** saves the campaign, the levels it uses and your unit
+settings as one `.wb2campaign.json` file; **Import** loads one. The setup is
+stored in `campaign/campaign.json`.
+
+## Units tab
+
+Edit every vehicle, robot, building and monster from the game's config:
+name, speed, energy use, terrain it can use, recipe, carrying capacity,
+toughness, attacks, recharging, and more, plus terrain effects and game
+rules. Changed entries get a dot; each can be reset to the original. Saved
+settings (`campaign/config.txt`) apply to **Play in game** and **Play
+campaign**, and the level checks use them too.
+
 ## Bigger game window
 
 The game itself is fixed at 610×440. **Play in game** (and **`Play WorldBuilder

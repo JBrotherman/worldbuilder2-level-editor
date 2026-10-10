@@ -9,21 +9,34 @@
 <body>
   <header class="topbar">
     <div class="brand"><span class="brick"></span>WB2 Level Editor</div>
-    <div class="doc">
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" data-tab="level" aria-selected="true">Level</button>
+      <button role="tab" data-tab="campaign" aria-selected="false">Campaign</button>
+      <button role="tab" data-tab="units" aria-selected="false">Units</button>
+    </nav>
+    <div class="doc" data-for-tab="level">
       <span id="docName">Untitled</span><span id="dirtyMark" class="dirty" hidden>●</span>
     </div>
-    <nav class="actions">
+    <nav class="actions" data-for-tab="level">
       <button id="btnNew" title="New level">New</button>
       <button id="btnOpen" title="Open a level (Ctrl+O)">Open</button>
       <button id="btnSave" title="Save (Ctrl+S)">Save</button>
       <button id="btnSaveAs" title="Save under a new name">Save as</button>
-      <button id="btnImport" title="Paste level text">Import</button>
+      <button id="btnImport" title="Import a level from a share code, text or file">Import</button>
+      <button id="btnShare" title="Get a share code or file for this level">Share</button>
       <span class="sep"></span>
       <button id="btnPlay" class="primary" title="Build into the game and launch it (F5)">▶ Play in game</button>
     </nav>
+    <div class="doc" data-for-tab="campaign" hidden></div>
+    <nav class="actions" data-for-tab="campaign" id="campaignActions" hidden></nav>
+    <div class="doc" data-for-tab="units" hidden></div>
+    <nav class="actions" data-for-tab="units" id="unitsActions" hidden></nav>
   </header>
 
-  <main class="layout">
+  <main class="page" id="campaignView" data-for-tab="campaign" hidden></main>
+  <main class="page" id="unitsView" data-for-tab="units" hidden></main>
+
+  <main class="layout" data-for-tab="level">
     <aside class="palette" id="palette" aria-label="Palette"></aside>
 
     <section class="stage">
@@ -146,9 +159,27 @@
 
   <dialog id="dlgImport">
     <form method="dialog">
-      <h2>Import level text</h2>
-      <textarea name="text" rows="16" spellcheck="false" placeholder="[map]&#10;name=...&#10; map=...."></textarea>
-      <menu><button value="cancel">Cancel</button><button value="ok" class="primary">Import</button></menu>
+      <h2>Import level</h2>
+      <p class="muted">Paste a share code (starts with <code>WB2:</code>) or level text, or open a level file.</p>
+      <textarea name="text" rows="14" spellcheck="false" placeholder="WB2:…  or  [map]&#10;name=...&#10; map=...."></textarea>
+      <menu>
+        <button type="button" id="btnImportFile" class="left">Open file…</button>
+        <button value="cancel">Cancel</button><button value="ok" class="primary">Import</button>
+      </menu>
+      <input type="file" id="importFile" accept=".txt,.wb2level,text/plain" hidden>
+    </form>
+  </dialog>
+
+  <dialog id="dlgShare">
+    <form method="dialog">
+      <h2>Share this level</h2>
+      <p class="muted">Send this code to someone; they can paste it into <strong>Import</strong>.</p>
+      <textarea id="shareCode" rows="6" readonly spellcheck="false"></textarea>
+      <p class="muted" id="shareInfo"></p>
+      <menu>
+        <button type="button" id="btnDownloadLevel" class="left">Download file</button>
+        <button value="cancel">Close</button><button type="button" id="btnCopyCode" class="primary">Copy code</button>
+      </menu>
     </form>
   </dialog>
 
@@ -163,7 +194,10 @@
   <div id="toast" class="toast" hidden></div>
 
   <script src="level.js"></script>
+  <script src="lingo.js"></script>
   <script src="render.js"></script>
   <script src="app.js"></script>
+  <script src="campaign.js"></script>
+  <script src="units.js"></script>
 </body>
 </html>

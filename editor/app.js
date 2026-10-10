@@ -750,15 +750,74 @@
   $('#btnSave').addEventListener('click', () => save(false));
   $('#btnSaveAs').addEventListener('click', () => save(true));
 
+  // ---------------------------------------------------------------- sharing
+  // Share code: "WB2:" + base64url(deflate(level text)).
+  const SHARE_PREFIX = 'WB2:';
+  const latin1Bytes = (s) => Uint8Array.from(s, (c) => c.charCodeAt(0) & 0xff);
+  const bytesLatin1 = (b) => Array.from(b, (x) => String.fromCharCode(x)).join('');
+  async function pipeBytes(bytes, stream) {
+    return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+  }
+  async function encodeShareCode(text) {
+    const packed = await pipeBytes(latin1Bytes(text), new CompressionStream('deflate-raw'));
+    return SHARE_PREFIX + btoa(bytesLatin1(packed)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  async function decodeShareCode(code) {
+    const b64 = code.trim().slice(SHARE_PREFIX.length).replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    return bytesLatin1(await pipeBytes(latin1Bytes(atob(b64)), new DecompressionStream('deflate-raw')));
+  }
+  // Level text, share code, or nothing recognisable -> level text or null.
+  async function levelTextFrom(input) {
+    const s = input.trim();
+    if (s.toUpperCase().startsWith(SHARE_PREFIX)) {
+      try { return await decodeShareCode(s); } catch (e) { throw new Error('That share code is damaged or incomplete.'); }
+    }
+    return s;
+  }
+
+  function downloadFile(name, text, type = 'text/plain') {
+    const a = el('a', { href: URL.createObjectURL(new Blob([latin1Bytes(text)], { type })), download: name });
+    document.body.append(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  const safeFileName = (s) => (s || 'level').replace(/[^\w\- ]+/g, '').trim().slice(0, 64) || 'level';
+
+  $('#btnShare').addEventListener('click', async () => {
+    const text = Level.serialize(state.level, terrainChars);
+    const code = await encodeShareCode(text);
+    $('#shareCode').value = code;
+    $('#shareInfo').textContent = `${code.length} characters · ${state.level.width}×${state.level.height} map`;
+    openDialog($('#dlgShare'));
+    $('#shareCode').select();
+  });
+  $('#btnCopyCode').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('#shareCode').value); toast('Share code copied.'); } catch (e) { $('#shareCode').select(); toast('Press Ctrl+C to copy the selected code.'); }
+  });
+  $('#btnDownloadLevel').addEventListener('click', () => {
+    downloadFile(`${safeFileName(state.level.meta.title || state.file || state.level.name)}.txt`, Level.serialize(state.level, terrainChars));
+  });
+
+  $('#btnImportFile').addEventListener('click', () => $('#importFile').click());
+  $('#importFile').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    $('#dlgImport textarea').value = bytesLatin1(new Uint8Array(await f.arrayBuffer()));
+  });
+
   $('#btnImport').addEventListener('click', async () => {
     const d = $('#dlgImport');
     const ta = d.querySelector('textarea');
     ta.value = '';
     if ((await openDialog(d)) !== 'ok' || !ta.value.trim()) return;
     if (!(await confirmDiscard())) return;
-    const lv = Level.parse(ta.value);
-    if (!lv.width || !lv.height) { toast('No map rows found (lines starting with " map=").', true); return; }
+    let text;
+    try { text = await levelTextFrom(ta.value); } catch (e) { toast(e.message, true); return; }
+    const lv = Level.parse(text);
+    if (!lv.width || !lv.height) { toast('No level found. Paste a WB2: share code or level text.', true); return; }
     loadLevel(lv, null, { dirty: true });
+    toast(`Imported "${lv.meta.title || lv.name}". Save it to keep it.`);
   });
 
   async function play() {
@@ -788,6 +847,7 @@
 
   // ---------------------------------------------------------------- keyboard
   window.addEventListener('keydown', (e) => {
+    if (currentTab !== 'level') return; // other tabs handle their own keys
     const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName) || document.querySelector('dialog[open]');
     const ctrl = e.ctrlKey || e.metaKey;
     if (ctrl && e.key.toLowerCase() === 's') { e.preventDefault(); save(e.shiftKey); return; }
@@ -810,10 +870,47 @@
       editSelected((i, lv) => { lv.items[state.selected.y][state.selected.x] = null; });
     }
   });
-  window.addEventListener('beforeunload', (e) => { if (state.dirty) { e.preventDefault(); e.returnValue = ''; } });
+  // Other tabs register functions that report unsaved changes.
+  const dirtyChecks = [() => state.dirty];
+  window.addEventListener('beforeunload', (e) => {
+    if (dirtyChecks.some((f) => f())) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // ---------------------------------------------------------------- tabs
+  let currentTab = 'level';
+  function showTab(tab) {
+    currentTab = tab;
+    document.body.dataset.tab = tab;
+    for (const b of document.querySelectorAll('[data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+    for (const n of document.querySelectorAll('[data-for-tab]')) n.hidden = n.dataset.forTab !== tab;
+    if (tab === 'level') view.requestDraw();
+    window.dispatchEvent(new CustomEvent('wb2:tab', { detail: tab }));
+    try { localStorage.setItem('wb2-editor-tab', tab); } catch (e) { /* ignore */ }
+  }
+  for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => showTab(b.dataset.tab));
+
+  // Re-read unit definitions after the Units tab saves, so names, recipes and
+  // level checks use the tuned values.
+  async function refreshCatalog() {
+    const fresh = await (await fetch('/api/catalog')).json();
+    for (const k of Object.keys(config)) delete config[k];
+    Object.assign(config, fresh.config);
+    catalog.configTuned = fresh.configTuned;
+    buildPalette();
+    setBrush(state.brush);
+    renderAll();
+  }
 
   // ---------------------------------------------------------------- start
-  window.wb2 = { state, view }; // handy for debugging from the console
+  // Shared with campaign.js / units.js (and handy for debugging).
+  window.wb2 = {
+    state, view, catalog, terrainChars,
+    el, toast, confirmDialog, openDialog, spriteUrl, pretty, typeName, terrainLabel, describeItem,
+    downloadFile, safeFileName, latin1Bytes, bytesLatin1, dirtyChecks, refreshCatalog, showTab,
+    tab: () => currentTab,
+    // Open a saved level in the Level tab.
+    async editLevel(file) { showTab('level'); await openCustom(file); },
+  };
   buildPalette();
   setTool('select');
   setBrush({ type: 'terrain', char: '.' });
@@ -831,4 +928,10 @@
     lv.name = 'CUSTOM LEVEL';
     loadLevel(lv, null);
   }
+
+  window.wb2.ready = true;
+  window.dispatchEvent(new CustomEvent('wb2:ready'));
+  let startTab = 'level';
+  try { startTab = localStorage.getItem('wb2-editor-tab') || 'level'; } catch (e) { /* ignore */ }
+  showTab(['level', 'campaign', 'units'].includes(startTab) ? startTab : 'level');
 })();

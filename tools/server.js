@@ -11,6 +11,7 @@ const game = require('./game');
 const catalog = require('./catalog');
 const { createSpriteStore } = require('./sprites');
 const gameWindow = require('./window');
+const campaign = require('./campaign');
 
 const ROOT = path.join(__dirname, '..');
 const EDITOR_DIR = path.join(ROOT, 'editor');
@@ -22,12 +23,35 @@ const PLAY_SLOT = 'map1.1';
 
 const cat = catalog.build();
 const sprites = createSpriteStore(cat.game.movie);
-const catalogJson = JSON.stringify({
-  config: cat.config,
-  terrain: cat.terrain,
-  levels: cat.levels,
-  sprites: sprites.info(),
-});
+const spriteInfo = sprites.info();
+const originalConfig = game.getText(cat.game, 'config');
+
+// Rebuilt whenever the tuned config changes, so level checks use it.
+let catalogJson = null;
+function getCatalogJson() {
+  if (!catalogJson) {
+    const tuned = campaign.loadConfigOverride();
+    catalogJson = JSON.stringify({
+      config: catalog.parseConfig(tuned != null ? tuned : originalConfig),
+      configTuned: tuned != null,
+      terrain: cat.terrain,
+      levels: cat.levels,
+      sprites: spriteInfo,
+    });
+  }
+  return catalogJson;
+}
+
+function writeBuildOrExplain(fn) {
+  try {
+    return fn();
+  } catch (e) {
+    if (e.code === 'EBUSY' || e.code === 'EPERM') {
+      throw Object.assign(new Error('The game is still running. Close it and press Play again.'), { status: 409 });
+    }
+    throw e;
+  }
+}
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
 
@@ -52,30 +76,59 @@ function levelPath(file) {
   return path.join(LEVELS_DIR, file + '.txt');
 }
 
+// Play one level: the original game (with any unit tuning) and the level in
+// mission 1.1.
 function play({ text, title }) {
   const g = game.load();
+  campaign.applyConfig(g);
   game.setText(g, PLAY_SLOT, text);
   const names = game.getText(g, 'level names').split('\n');
   const t = String(title || 'Custom Level').replace(/[\r\n]/g, ' ').slice(0, 40);
   game.setText(g, 'level names', names.map((l) => (/^1\s+1\s/.test(l) ? `1 1 ${t}` : l)).join('\n'));
-  let outDir;
-  try {
-    outDir = game.writeBuild(g);
-  } catch (e) {
-    if (e.code === 'EBUSY' || e.code === 'EPERM') {
-      throw Object.assign(new Error('The game is still running. Close it and press Play again.'), { status: 409 });
-    }
-    throw e;
-  }
+  const outDir = writeBuildOrExplain(() => game.writeBuild(g));
   const { scaled } = gameWindow.launch(path.join(outDir, 'Launcher.exe'));
   return { ok: true, slot: PLAY_SLOT, scaled };
+}
+
+function playCampaign({ freshProgress, unlockAll }) {
+  const outDir = writeBuildOrExplain(() => campaign.buildCampaign({ freshProgress: !!freshProgress, unlockAll: !!unlockAll }));
+  const { scaled } = gameWindow.launch(path.join(outDir, 'Launcher.exe'));
+  return { ok: true, scaled };
 }
 
 async function handle(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const p = decodeURIComponent(url.pathname);
 
-  if (p === '/api/catalog') return send(res, 200, catalogJson);
+  if (p === '/api/catalog') return send(res, 200, getCatalogJson());
+
+  if (p === '/api/campaign') {
+    if (req.method === 'GET') {
+      return json(res, { campaign: campaign.loadCampaign(), original: campaign.originals(cat.game) });
+    }
+    if (req.method === 'PUT') return json(res, { campaign: campaign.saveCampaign(JSON.parse(await readBody(req))) });
+  }
+  if (p === '/api/campaign/play' && req.method === 'POST') {
+    return json(res, playCampaign(JSON.parse(await readBody(req) || '{}')));
+  }
+
+  if (p === '/api/config') {
+    if (req.method === 'GET') {
+      const tuned = campaign.loadConfigOverride();
+      return json(res, { text: tuned != null ? tuned : originalConfig, original: originalConfig, tuned: tuned != null });
+    }
+    if (req.method === 'PUT') {
+      const text = await readBody(req);
+      campaign.saveConfigOverride(text.replace(/\r\n?/g, '\n') === originalConfig ? null : text);
+      catalogJson = null;
+      return json(res, { ok: true });
+    }
+    if (req.method === 'DELETE') {
+      campaign.saveConfigOverride(null);
+      catalogJson = null;
+      return json(res, { ok: true });
+    }
+  }
 
   if (p === '/api/level') {
     const id = url.searchParams.get('id');
