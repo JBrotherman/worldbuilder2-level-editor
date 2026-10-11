@@ -37,7 +37,6 @@
     window.addEventListener('keydown', (e) => {
       if (api.tab() !== 'campaign') return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
-      if (e.key === 'F5') { e.preventDefault(); play(); }
     });
   }
 
@@ -49,7 +48,7 @@
       el('button', { title: 'Save (Ctrl+S)', onclick: save }, 'Save'),
       el('button', { title: 'Share this campaign in the gallery, or as a file', onclick: () => document.querySelector('#dlgCampaignShare').showModal() }, 'Share'),
       el('span', { class: 'sep' }),
-      el('button', { class: 'primary', id: 'btnPlayCampaign', title: 'Build the whole campaign and launch it (F5)', onclick: play }, '▶ Play campaign'),
+      el('button', { class: 'primary', id: 'btnPlayCampaign', title: 'Build the whole campaign and launch it', onclick: play }, '▶ Play campaign'),
     );
     document.querySelector('.doc[data-for-tab=campaign]').append(el('span', { id: 'campaignStatus' }, 'Campaign'));
     const shareDialog = document.querySelector('#dlgCampaignShare');
