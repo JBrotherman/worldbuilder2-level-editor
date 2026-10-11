@@ -1,4 +1,5 @@
--- Gallery database (Cloudflare D1 / SQLite).
+-- Gallery database (Cloudflare D1 / SQLite). For a database made before a
+-- change, see migrations/.
 CREATE TABLE IF NOT EXISTS items (
   id TEXT PRIMARY KEY,           -- short random id, used in links
   type TEXT NOT NULL,            -- 'level' or 'campaign'
@@ -9,15 +10,19 @@ CREATE TABLE IF NOT EXISTS items (
   info TEXT NOT NULL DEFAULT '{}', -- summary for the list (map size, missions)
   created INTEGER NOT NULL,      -- ms since 1970
   downloads INTEGER NOT NULL DEFAULT 0,
-  reports INTEGER NOT NULL DEFAULT 0,
+  reports INTEGER NOT NULL DEFAULT 0,    -- spam/inappropriate reports (hidden at 5)
+  impossible INTEGER NOT NULL DEFAULT 0, -- players who say it can't be finished
   delete_hash TEXT NOT NULL,     -- SHA-256 of the uploader's delete key
   ip_hash TEXT NOT NULL          -- for rate limiting (salted hash, not the IP)
 );
 CREATE INDEX IF NOT EXISTS items_created ON items (created);
 CREATE INDEX IF NOT EXISTS items_ip ON items (ip_hash, created);
 
-CREATE TABLE IF NOT EXISTS reports (
+-- One row per person, item and reason ('spam', 'inappropriate', 'impossible').
+CREATE TABLE IF NOT EXISTS item_reports (
   item_id TEXT NOT NULL,
   ip_hash TEXT NOT NULL,
-  PRIMARY KEY (item_id, ip_hash)
+  reason TEXT NOT NULL,
+  created INTEGER NOT NULL,
+  PRIMARY KEY (item_id, ip_hash, reason)
 );

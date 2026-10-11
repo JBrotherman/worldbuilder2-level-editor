@@ -77,6 +77,21 @@ try {
   await call('POST', `/api/items/${r.body.id}/report`, { ip: '3.3.3.9' });
   check(!(await call('GET', '/api/items')).body.items.some((x) => x.id === r.body.id), 'hidden after 5 reports');
 
+  // Report reasons: impossible is counted, not hidden; spam and
+  // inappropriate from the same person count once.
+  const imp = await call('POST', '/api/items', { body: { type: 'level', title: 'Hard one', data: levelText }, ip: '2.2.2.3' });
+  const reportAs = (ip, reason) => call('POST', `/api/items/${imp.body.id}/report`, { ip, body: { reason } });
+  check((await reportAs('7.7.7.1', 'boring')).status === 400, 'an unknown report reason is refused');
+  for (const ip of ['7.7.7.1', '7.7.7.2', '7.7.7.2']) await reportAs(ip, 'impossible');
+  let listedImp = (await call('GET', '/api/items')).body.items.find((x) => x.id === imp.body.id);
+  check(listedImp && listedImp.impossible === 2, 'impossible reports are counted per person (2), and shown in the list');
+  for (const r of ['spam', 'inappropriate']) await reportAs('7.7.7.3', r);
+  for (const ip of ['7.7.7.4', '7.7.7.5', '7.7.7.6']) await reportAs(ip, 'inappropriate');
+  listedImp = (await call('GET', '/api/items')).body.items.find((x) => x.id === imp.body.id);
+  check(!!listedImp, 'still listed with 4 people reporting spam/inappropriate (one person reporting both counts once)');
+  await reportAs('7.7.7.7', 'spam');
+  check(!(await call('GET', '/api/items')).body.items.some((x) => x.id === imp.body.id), 'hidden once 5 people report spam/inappropriate');
+
   // Rate limit: 10 uploads per hour per IP.
   let lastStatus;
   for (let i = 0; i < 11; i++) lastStatus = (await call('POST', '/api/items', { body: { type: 'level', title: `L${i}`, data: levelText }, ip: '4.4.4.4' })).status;

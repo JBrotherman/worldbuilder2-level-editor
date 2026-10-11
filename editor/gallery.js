@@ -255,6 +255,8 @@
       el('td', { class: 'col-thumb' }, thumb),
       el('td', { class: 'col-name' },
         el('div', { class: 'gallery-name' }, item.title, mine ? el('span', { class: 'gallery-badge' }, 'yours') : null),
+        // Shown once at least two players say it can't be finished.
+        item.impossible >= 2 ? el('div', { class: 'gallery-warn', title: 'Reported as impossible to finish' }, `⚠ ${item.impossible} players say it can't be finished`) : null,
         item.description ? el('div', { class: 'gallery-desc', title: item.description }, item.description) : null),
       el('td', { class: 'col-type' }, type),
       el('td', { class: 'col-num', 'data-label': 'Missions' }, String(isLevel ? 1 : item.info.missions || 0)),
@@ -382,11 +384,41 @@
     }
   }
 
+  // Asks why; resolves to 'spam', 'inappropriate', 'impossible' or null.
+  function chooseReportReason(item) {
+    let d = document.querySelector('#dlgReport');
+    if (!d) {
+      d = el('dialog', { id: 'dlgReport', class: 'report-dialog' });
+      document.body.append(d);
+    }
+    const what = item.type === 'level' ? 'level' : 'campaign';
+    const option = (value, label, text) => el('button', { value, class: 'report-option' }, el('strong', {}, label), el('span', {}, text));
+    d.replaceChildren(el('form', { method: 'dialog' },
+      el('h2', {}, `Report “${item.title}”`),
+      el('p', { class: 'muted' }, 'What\'s wrong with it?'),
+      el('div', { class: 'report-options' },
+        option('spam', 'Spam', 'Advertising, nonsense, or the same thing shared again and again.'),
+        option('inappropriate', 'Inappropriate', 'Rude, hurtful, or not suitable for kids.'),
+        option('impossible', `Impossible ${what}`, `It can't be finished, for example a goal can't be reached or there aren't enough bricks.`)),
+      el('p', { class: 'muted report-note' }, `Things several people report as spam or inappropriate are hidden. If players report a ${what} as impossible, the gallery warns others.`),
+      el('menu', {}, el('button', { value: 'cancel' }, 'Cancel'))));
+    d.returnValue = '';
+    d.showModal();
+    return new Promise((resolve) => d.addEventListener('close', () => {
+      resolve(['spam', 'inappropriate', 'impossible'].includes(d.returnValue) ? d.returnValue : null);
+    }, { once: true }));
+  }
+
   async function report(item) {
-    if (!(await api.confirmDialog('Report this?', `Report “${item.title}” as spam or inappropriate? Things several people report are hidden.`, 'Report'))) return;
+    const reason = await chooseReportReason(item);
+    if (!reason) return;
     try {
-      await call(`/api/items/${item.id}/report`, { method: 'POST' });
-      api.toast('Thanks, reported.');
+      await call(`/api/items/${item.id}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      api.toast(reason === 'impossible' ? 'Thanks. If more players find it impossible, the gallery warns others.' : 'Thanks, reported.');
     } catch (e) {
       api.toast(e.message, true);
     }

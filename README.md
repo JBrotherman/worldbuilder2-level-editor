@@ -125,8 +125,10 @@ Browse the levels and campaigns other players shared, as a table you can
 search and sort on any column (name, type, missions, creator, plays, date):
 **Play** one, open a level in the editor or import a campaign. Share your own with **Share my level** / **Share my campaign** (or
 **Share to gallery** in the Level tab's Share dialog and the Campaign tab).
-There are no accounts: you can delete what you shared from the same browser,
-and things several people report are hidden.
+There are no accounts: you can delete what you shared from the same browser.
+**Report** asks why: things five people report as spam or inappropriate are
+hidden, and once two players report something as impossible to finish, the
+gallery shows a warning on it.
 
 Online, the gallery is the site's front page,
 <https://jbrotherman.github.io/worldbuilder2-level-editor/>, which needs no

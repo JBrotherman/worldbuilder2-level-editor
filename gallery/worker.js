@@ -2,19 +2,21 @@
 // Players share levels and campaigns from the editor and browse, open and
 // import other people's. No accounts: each upload gets a secret delete key
 // (kept by the uploader's browser), uploads are rate limited per IP (stored
-// only as a salted hash), and items with several reports are hidden.
+// only as a salted hash), and items several people report as spam or
+// inappropriate are hidden; "impossible" reports are shown as a warning.
 //
 //   GET    /api/items?type=level|campaign&sort=created|downloads|title|author|type|missions&dir=asc|desc&q=…&offset=0
 //   GET    /api/items/:id          (counts as a download, unless ?peek)
 //   POST   /api/items              { type, title, author, description, data }
 //   DELETE /api/items/:id          X-Delete-Key, or Authorization: Bearer ADMIN_TOKEN
-//   POST   /api/items/:id/report
+//   POST   /api/items/:id/report   { reason: spam|inappropriate|impossible }
 
 const PAGE = 24;
 const LIMITS = { title: 60, author: 40, description: 600, level: 20000, campaign: 400000, config: 100000 };
 const UPLOADS_PER_HOUR = 10; // per IP
 const UPLOADS_PER_DAY = 500; // for everyone together
-const HIDE_AFTER_REPORTS = 5;
+const HIDE_AFTER_REPORTS = 5; // spam or inappropriate, from different people
+const REPORT_REASONS = ['spam', 'inappropriate', 'impossible'];
 const ALLOWED_ORIGINS = [/^https:\/\/jbrotherman\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/];
 
 class HttpError extends Error {
@@ -85,6 +87,7 @@ const publicItem = (row, withData) => ({
   info: JSON.parse(row.info || '{}'),
   created: row.created,
   downloads: row.downloads,
+  impossible: row.impossible || 0,
   ...(withData ? { data: row.data } : {}),
 });
 
@@ -166,16 +169,27 @@ async function remove(env, request, id) {
   const key = request.headers.get('X-Delete-Key') || '';
   if (!isAdmin && (!key || (await sha256(key)) !== row.delete_hash)) throw new HttpError(403, 'Only the person who shared this can delete it.');
   await env.DB.prepare('DELETE FROM items WHERE id = ?').bind(id).run();
-  await env.DB.prepare('DELETE FROM reports WHERE item_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM item_reports WHERE item_id = ?').bind(id).run();
   return { ok: true };
 }
 
-async function report(env, id, ipHash) {
+// Each person counts once per reason. Spam and inappropriate reports hide
+// an item (at HIDE_AFTER_REPORTS); "impossible" ones are only counted.
+async function report(env, request, id, ipHash) {
+  let reason = 'spam'; // what a report without a reason meant before
+  const text = await request.text();
+  if (text) {
+    try { reason = JSON.parse(text).reason; } catch (e) { reason = null; }
+  }
+  if (!REPORT_REASONS.includes(reason)) throw new HttpError(400, 'Choose why you are reporting this.');
   const row = await env.DB.prepare('SELECT id FROM items WHERE id = ?').bind(id).first();
   if (!row) throw new HttpError(404, 'Not found.');
-  await env.DB.prepare('INSERT OR IGNORE INTO reports (item_id, ip_hash) VALUES (?, ?)').bind(id, ipHash).run();
-  const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE item_id = ?').bind(id).first();
-  await env.DB.prepare('UPDATE items SET reports = ? WHERE id = ?').bind(n, id).run();
+  await env.DB.prepare('INSERT OR IGNORE INTO item_reports (item_id, ip_hash, reason, created) VALUES (?, ?, ?, ?)').bind(id, ipHash, reason, Date.now()).run();
+  const counts = await env.DB.prepare(`SELECT
+      COUNT(DISTINCT CASE WHEN reason IN ('spam', 'inappropriate') THEN ip_hash END) AS abuse,
+      COUNT(CASE WHEN reason = 'impossible' THEN 1 END) AS impossible
+    FROM item_reports WHERE item_id = ?`).bind(id).first();
+  await env.DB.prepare('UPDATE items SET reports = ?, impossible = ? WHERE id = ?').bind(counts.abuse, counts.impossible, id).run();
   return { ok: true };
 }
 
@@ -193,7 +207,7 @@ export default {
       const [, id, isReport] = m;
       if (!id && request.method === 'GET') return json(request, await list(env, url));
       if (!id && request.method === 'POST') return json(request, await create(env, request, ipHash), 201);
-      if (id && isReport && request.method === 'POST') return json(request, await report(env, id, ipHash));
+      if (id && isReport && request.method === 'POST') return json(request, await report(env, request, id, ipHash));
       if (id && !isReport && request.method === 'GET') return json(request, await get(env, id, url.searchParams.has('peek')));
       if (id && !isReport && request.method === 'DELETE') return json(request, await remove(env, request, id));
       throw new HttpError(405, 'Method not allowed.');
