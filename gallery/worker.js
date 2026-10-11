@@ -5,7 +5,7 @@
 // only as a salted hash), and items with several reports are hidden.
 //
 //   GET    /api/items?type=level|campaign&sort=new|popular&q=…&offset=0
-//   GET    /api/items/:id          (counts as a download)
+//   GET    /api/items/:id          (counts as a download, unless ?peek)
 //   POST   /api/items              { type, title, author, description, data }
 //   DELETE /api/items/:id          X-Delete-Key, or Authorization: Bearer ADMIN_TOKEN
 //   POST   /api/items/:id/report
@@ -133,9 +133,11 @@ async function create(env, request, ipHash) {
   return { id, deleteKey };
 }
 
-async function get(env, id) {
+// Counts as a download, unless ?peek (just showing it, e.g. for a link).
+async function get(env, id, peek) {
   const row = await env.DB.prepare('SELECT * FROM items WHERE id = ?').bind(id).first();
-  if (!row) throw new HttpError(404, 'That level is no longer in the gallery.');
+  if (!row || row.reports >= HIDE_AFTER_REPORTS) throw new HttpError(404, 'That is no longer in the gallery.');
+  if (peek) return publicItem(row, true);
   await env.DB.prepare('UPDATE items SET downloads = downloads + 1 WHERE id = ?').bind(id).run();
   return publicItem({ ...row, downloads: row.downloads + 1 }, true);
 }
@@ -176,7 +178,7 @@ export default {
       if (!id && request.method === 'GET') return json(request, await list(env, url));
       if (!id && request.method === 'POST') return json(request, await create(env, request, ipHash), 201);
       if (id && isReport && request.method === 'POST') return json(request, await report(env, id, ipHash));
-      if (id && !isReport && request.method === 'GET') return json(request, await get(env, id));
+      if (id && !isReport && request.method === 'GET') return json(request, await get(env, id, url.searchParams.has('peek')));
       if (id && !isReport && request.method === 'DELETE') return json(request, await remove(env, request, id));
       throw new HttpError(405, 'Method not allowed.');
     } catch (e) {

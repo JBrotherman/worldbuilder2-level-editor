@@ -1,5 +1,7 @@
-// Gallery tab: browse the levels and campaigns other players shared, open
-// them in the editor, and share your own. The server is gallery/worker.js.
+// The gallery: levels and campaigns other players shared. Runs as the
+// editor's Gallery tab, and on its own as gallery.html, which needs no game
+// files to browse. Play builds an item into the player's own game; Open
+// loads it into the editor. The server is gallery/worker.js.
 (function () {
   'use strict';
   const DEFAULT_SERVER = 'https://wb2-gallery.jbrotherman.workers.dev';
@@ -7,11 +9,23 @@
   const KEYS = 'wb2-gallery-keys'; // id -> delete key, for things you shared
   const AUTHOR = 'wb2-gallery-author';
 
+  // Preview colours per map character (terrain), and for items on the map.
+  const TERRAIN_COLORS = {
+    '.': '#3fae5c', _: '#6f9a5a', T: '#1f7a3d', '!': '#1f7a3d', "'": '#1f7a3d', '?': '#2a8a45',
+    '%': '#2f9450', '&': '#2f9450', $: '#2f9450', '*': '#2f9450', '#': '#5d7d3c',
+    w: '#1fb5e6', x: '#127fb5', r: '#4fc0c8', M: '#8c8577', '^': '#b0503a', '@': '#2a2420',
+    ':': '#e6c84a', '`': '#a9b4b8', '~': '#c9a227', '>': '#d0703a', '-': '#4c585e',
+    '(': '#5f6e75', '[': '#5f6e75', '{': '#5f6e75', '\\': '#5f6e75', '/': '#5f6e75', ')': '#5f6e75', ']': '#5f6e75', '}': '#5f6e75', '+': '#5f6e75', '=': '#5f6e75',
+  };
+  const ITEM_COLORS = { goal: '#ffcf1a', pile: '#ff9d2e', plan: '#4f9dff', whirlpool: '#9fe8ff', unit: '#ffffff', monster: '#ff5a4f', building: '#c38bff' };
+
   let api, el;
+  let onPage = false; // gallery.html, rather than the editor's tab
   const query = { type: '', sort: 'new', q: '' };
   let items = [];
   let more = false;
   let busy = false;
+  let featured = null; // the item a link pointed to (gallery.html#g=…)
 
   const store = {
     get(key, fallback) { try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); } catch (e) { return fallback; } },
@@ -19,6 +33,7 @@
   };
   // A different server can be set for testing: localStorage['wb2-gallery-server'].
   const server = () => String(store.get('wb2-gallery-server', DEFAULT_SERVER)).replace(/\/$/, '');
+  const itemLink = (id) => `${SITE}gallery.html#g=${id}`;
 
   async function call(path, opts = {}) {
     let res;
@@ -32,11 +47,15 @@
     return body;
   }
 
-  function init() {
+  // ---------------------------------------------------------------- start
+
+  function initEditor() {
     api = window.wb2;
     el = api.el;
     api.shareToGallery = share;
     document.querySelector('#galleryActions').append(
+      // The gallery page is part of the online version only.
+      window.WB2_WEB ? el('a', { class: 'button', href: 'gallery.html', target: '_blank', title: 'The gallery on its own page, for people who don\'t have the editor set up' }, 'Gallery page') : '',
       el('button', { title: 'Share the level you have open in the Level tab', onclick: () => share('level') }, 'Share my level'),
       el('button', { title: 'Share your campaign (from the Campaign tab)', onclick: () => share('campaign') }, 'Share my campaign'),
     );
@@ -51,6 +70,42 @@
     window.addEventListener('hashchange', openLinkedItem);
   }
 
+  // gallery.html: the same helpers the editor has, for its own markup.
+  function initPage() {
+    onPage = true;
+    el = (tag, attrs = {}, ...children) => {
+      const e = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (k === 'class') e.className = v;
+        else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+        else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v);
+      }
+      for (const c of children.flat()) if (c != null) e.append(c);
+      return e;
+    };
+    const toast = (msg, isError = false, ms = 4000) => {
+      const t = document.querySelector('#toast');
+      t.textContent = msg;
+      t.className = 'toast' + (isError ? ' error' : '');
+      t.hidden = false;
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => { t.hidden = true; }, ms);
+    };
+    const confirmDialog = (title, text, okLabel = 'OK') => {
+      const d = document.querySelector('#dlgConfirm');
+      document.querySelector('#confirmTitle').textContent = title;
+      document.querySelector('#confirmText').textContent = text;
+      document.querySelector('#confirmOk').textContent = okLabel;
+      d.returnValue = '';
+      d.showModal();
+      return new Promise((resolve) => d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true }));
+    };
+    api = { el, toast, confirmDialog, tab: () => 'gallery' };
+    const m = /^#g=([a-z0-9]{8})$/.exec(location.hash);
+    if (m) featured = m[1];
+    refresh();
+  }
+
   // ---------------------------------------------------------------- list
 
   async function refresh(append = false) {
@@ -62,7 +117,11 @@
       const params = new URLSearchParams({ sort: query.sort, offset: append ? items.length : 0 });
       if (query.type) params.set('type', query.type);
       if (query.q) params.set('q', query.q);
-      const res = await call(`/api/items?${params}`);
+      const [res, linked] = await Promise.all([
+        call(`/api/items?${params}`),
+        typeof featured === 'string' ? call(`/api/items/${featured}?peek`).catch(() => null) : null,
+      ]);
+      if (typeof featured === 'string') featured = linked;
       items = append ? items.concat(res.items) : res.items;
       more = res.more;
       render();
@@ -89,20 +148,28 @@
       search,
       select(query.type, [['', 'Levels and campaigns'], ['level', 'Levels'], ['campaign', 'Campaigns']], (v) => { query.type = v; refresh(); }, 'Show'),
       select(query.sort, [['new', 'Newest first'], ['popular', 'Most played']], (v) => { query.sort = v; refresh(); }, 'Order'));
-    const grid = el('div', { class: 'gallery-grid' }, items.map(card));
+    const list = featured ? items.filter((i) => i.id !== featured.id) : items;
+    const grid = el('div', { class: 'gallery-grid' }, list.map(card));
     let note = null;
     if (error) note = el('p', { class: 'gallery-note error' }, error, ' ', el('button', { class: 'small', onclick: () => refresh() }, 'Try again'));
-    else if (!items.length) note = el('p', { class: 'gallery-note' }, query.q || query.type ? 'Nothing found.' : 'Nothing shared yet. Be the first: share a level with the buttons above.');
-    view.replaceChildren(
-      el('div', { class: 'page-intro' },
+    else if (!items.length) note = el('p', { class: 'gallery-note' }, query.q || query.type ? 'Nothing found.' : 'Nothing shared yet.');
+    const intro = onPage
+      ? el('div', { class: 'page-intro' },
+        el('h1', {}, 'WorldBuilder 2 Gallery'),
+        el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Press Play to play one in your own copy of LEGO WorldBuilder 2, or open it in the editor to change it. To share your own, use Share in the ',
+          el('a', { href: 'index.html' }, 'editor'), '.'))
+      : el('div', { class: 'page-intro' },
         el('h1', {}, 'Gallery'),
-        el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Open one to play it or remix it; share your own with the buttons above or from Share in the Level tab.')),
+        el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Play one, or open it here to play with it; share your own with the buttons above or from Share in the Level tab.'));
+    view.replaceChildren(
+      intro,
+      featured ? el('div', { class: 'gallery-featured' }, el('h2', {}, 'Shared with you'), el('div', { class: 'gallery-grid' }, card(featured))) : null,
       head,
       el('p', { id: 'galleryStatus', class: 'muted', role: 'status' }),
       note,
       grid,
       more ? el('div', { class: 'gallery-more' }, el('button', { onclick: () => refresh(true) }, 'Show more')) : null);
-    drawThumbs(grid);
+    for (const canvas of view.querySelectorAll('canvas.gallery-thumb')) drawThumb(canvas);
   }
 
   function ago(ms) {
@@ -120,8 +187,9 @@
       ? `${item.info.width}×${item.info.height}`
       : `${item.info.missions} mission${item.info.missions === 1 ? '' : 's'}${item.info.tunedUnits ? ', own unit settings' : ''}`;
     const thumb = item.type === 'level'
-      ? el('canvas', { class: 'gallery-thumb', 'data-id': item.id, 'aria-hidden': 'true' })
+      ? el('canvas', { class: 'gallery-thumb', 'aria-hidden': 'true' })
       : el('div', { class: 'gallery-thumb campaign', 'aria-hidden': 'true' }, el('span', {}, String(item.info.missions)), 'missions');
+    if (item.type === 'level') thumb.item = item;
     return el('article', { class: 'gallery-card' },
       thumb,
       el('div', { class: 'gallery-body' },
@@ -129,63 +197,33 @@
         el('div', { class: 'gallery-meta' }, `${item.type === 'level' ? 'Level' : 'Campaign'} by ${item.author} · ${size} · ${ago(item.created)} · ${item.downloads} play${item.downloads === 1 ? '' : 's'}`),
         item.description ? el('p', { class: 'gallery-desc' }, item.description) : null,
         el('div', { class: 'gallery-actions' },
-          el('button', { class: 'primary small', onclick: () => openItem(item.id) }, item.type === 'level' ? 'Open in editor' : 'Import campaign'),
+          el('button', { class: 'primary small', title: 'Play it in your own copy of WorldBuilder 2', onclick: () => playItem(item) }, '▶ Play'),
+          el('button', { class: 'small', title: item.type === 'level' ? 'Open it in the editor to look at it or change it' : 'Use it as your campaign in the editor', onclick: () => openItem(item) }, item.type === 'level' ? 'Open in editor' : 'Import into editor'),
           el('button', { class: 'small', title: 'Copy a link to this, to send to someone', onclick: () => copyLink(item) }, 'Copy link'),
           mine
             ? el('button', { class: 'small', onclick: () => remove(item) }, 'Delete')
             : el('button', { class: 'small subtle', title: 'Report spam or something inappropriate', onclick: () => report(item) }, 'Report'))));
   }
 
-  // ---------------------------------------------------------------- previews
-
-  // Average colour of each terrain picture, from the player's own game.
-  let terrainColors = null;
-  function loadTerrainColors() {
-    if (!terrainColors) {
-      terrainColors = Promise.all(api.catalog.terrain.map((t) => new Promise((resolve) => {
-        const sprite = api.view.terrainSprite(t.name);
-        if (!sprite) return resolve([t.char, '#556']);
-        const img = new Image();
-        img.onload = () => {
-          const c = document.createElement('canvas');
-          c.width = c.height = 8;
-          const g = c.getContext('2d', { willReadFrequently: true });
-          g.drawImage(img, 0, 0, 8, 8);
-          const px = g.getImageData(0, 0, 8, 8).data;
-          let r = 0, gr = 0, b = 0, n = 0;
-          for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 128) { r += px[i]; gr += px[i + 1]; b += px[i + 2]; n++; }
-          resolve([t.char, n ? `rgb(${Math.round(r / n)},${Math.round(gr / n)},${Math.round(b / n)})` : '#556']);
-        };
-        img.onerror = () => resolve([t.char, '#556']);
-        img.src = api.spriteUrl(sprite);
-      }))).then((pairs) => new Map(pairs));
-    }
-    return terrainColors;
-  }
-
-  const ITEM_COLORS = { goal: '#ffcf1a', pile: '#ff9d2e', plan: '#4f9dff', whirlpool: '#9fe8ff', unit: '#ffffff', monster: '#ff5a4f', building: '#c38bff' };
-
-  async function drawThumbs(grid) {
-    const colors = await loadTerrainColors();
-    for (const canvas of grid.querySelectorAll('canvas.gallery-thumb')) {
-      const item = items.find((i) => i.id === canvas.dataset.id);
-      if (!item || !item.data) continue;
-      const lv = Level.parse(item.data);
-      if (!lv.width || !lv.height) continue;
-      const cell = Math.max(2, Math.min(8, Math.floor(160 / Math.max(lv.width, lv.height))));
-      canvas.width = lv.width * cell;
-      canvas.height = lv.height * cell;
-      const g = canvas.getContext('2d');
-      for (let y = 0; y < lv.height; y++) {
-        for (let x = 0; x < lv.width; x++) {
-          g.fillStyle = colors.get(lv.terrain[y][x]) || '#556';
-          g.fillRect(x * cell, y * cell, cell, cell);
-          const it = lv.items[y][x];
-          if (it) {
-            g.fillStyle = ITEM_COLORS[it.kind === 'unit' && ITEM_COLORS[it.cat] ? it.cat : it.kind] || '#fff';
-            const m = Math.max(1, Math.floor(cell / 4));
-            g.fillRect(x * cell + m, y * cell + m, cell - 2 * m, cell - 2 * m);
-          }
+  // A little map of a level.
+  function drawThumb(canvas) {
+    const item = canvas.item;
+    if (!item || !item.data) return;
+    const lv = Level.parse(item.data);
+    if (!lv.width || !lv.height) return;
+    const cell = Math.max(2, Math.min(8, Math.floor(160 / Math.max(lv.width, lv.height))));
+    canvas.width = lv.width * cell;
+    canvas.height = lv.height * cell;
+    const g = canvas.getContext('2d');
+    for (let y = 0; y < lv.height; y++) {
+      for (let x = 0; x < lv.width; x++) {
+        g.fillStyle = TERRAIN_COLORS[lv.terrain[y][x]] || '#556';
+        g.fillRect(x * cell, y * cell, cell, cell);
+        const it = lv.items[y][x];
+        if (it) {
+          g.fillStyle = ITEM_COLORS[it.kind === 'unit' && ITEM_COLORS[it.cat] ? it.cat : it.kind] || '#fff';
+          const m = Math.max(1, Math.floor(cell / 4));
+          g.fillRect(x * cell + m, y * cell + m, cell - 2 * m, cell - 2 * m);
         }
       }
     }
@@ -193,14 +231,43 @@
 
   // ---------------------------------------------------------------- actions
 
-  async function openItem(id) {
-    let item;
+  // Fetches the whole item; this counts as a play.
+  async function fetchItem(id) {
     try {
-      item = await call(`/api/items/${id}`);
+      return await call(`/api/items/${id}`);
     } catch (e) {
       api.toast(e.message, true, 6000);
+      return null;
+    }
+  }
+
+  async function playItem(summary) {
+    const item = await fetchItem(summary.id);
+    if (!item) return;
+    if (onPage) {
+      await window.WB2_GALLERY_HOST.play(item);
       return;
     }
+    // The editor's API: the browser version shows its own Play dialog, the
+    // local version starts the game.
+    try {
+      const res = await fetch('/api/shared/play', { method: 'POST', body: JSON.stringify({ type: item.type, title: item.title, data: item.data }) });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error);
+      if (body.message === undefined) api.toast('Game launching… Press Start Game to get to the world map.', false, 7000);
+    } catch (e) {
+      api.toast(e.message, true, 7000);
+    }
+  }
+
+  async function openItem(summary) {
+    if (onPage) {
+      // The editor opens it (after setting up the game files, if needed).
+      location.href = `index.html#g=${summary.id}`;
+      return;
+    }
+    const item = await fetchItem(summary.id);
+    if (!item) return;
     if (item.type === 'level') {
       if (await api.openLevelText(item.data)) api.toast(`Opened “${item.title}” by ${item.author}. Save it to keep it.`, false, 6000);
     } else if (await api.importCampaign(item.data)) {
@@ -208,19 +275,14 @@
     }
   }
 
-  // Links like …/#g=abcd2345 open that item.
+  // In the editor, links like …/index.html#g=abcd2345 open that item.
   async function openLinkedItem() {
     const m = /^#g=([a-z0-9]{8})$/.exec(location.hash);
     if (!m) return;
     history.replaceState(null, '', location.pathname + location.search);
     api.showTab('gallery');
-    let item;
-    try {
-      item = await call(`/api/items/${m[1]}`);
-    } catch (e) {
-      api.toast(e.message, true, 6000);
-      return;
-    }
+    const item = await fetchItem(m[1]);
+    if (!item) return;
     const what = item.type === 'level' ? 'level' : 'campaign';
     if (!(await api.confirmDialog(`Open “${item.title}”?`, `A ${what} by ${item.author} from the gallery.${item.description ? ` ${item.description}` : ''}`, item.type === 'level' ? 'Open in editor' : 'Import campaign'))) return;
     if (item.type === 'level') {
@@ -229,7 +291,7 @@
   }
 
   async function copyLink(item) {
-    const link = `${SITE}#g=${item.id}`;
+    const link = itemLink(item.id);
     try {
       await navigator.clipboard.writeText(link);
       api.toast('Link copied.');
@@ -256,6 +318,7 @@
       delete keys[item.id];
       store.set(KEYS, keys);
       items = items.filter((i) => i.id !== item.id);
+      if (featured && featured.id === item.id) featured = null;
       render();
       api.toast('Deleted from the gallery.');
     } catch (e) {
@@ -300,7 +363,7 @@
       const keys = store.get(KEYS, {});
       keys[res.id] = res.deleteKey;
       store.set(KEYS, keys);
-      if (await api.confirmDialog('Shared!', `It's in the gallery now. Anyone can open it with this link: ${SITE}#g=${res.id}`, 'Copy link')) {
+      if (await api.confirmDialog('Shared!', `It's in the gallery now. Anyone can see and play it with this link: ${itemLink(res.id)}`, 'Copy link')) {
         copyLink({ id: res.id });
       }
       if (api.tab() === 'gallery') refresh();
@@ -309,6 +372,9 @@
     }
   }
 
-  if (window.wb2 && window.wb2.ready) init();
-  else window.addEventListener('wb2:ready', init, { once: true });
+  if (window.WB2_GALLERY_HOST) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPage, { once: true });
+    else initPage();
+  } else if (window.wb2 && window.wb2.ready) initEditor();
+  else window.addEventListener('wb2:ready', initEditor, { once: true });
 })();

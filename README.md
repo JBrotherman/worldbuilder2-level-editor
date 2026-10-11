@@ -121,12 +121,21 @@ campaign**, and the level checks use them too.
 ## Gallery tab
 
 Browse the levels and campaigns other players shared: search, sort by newest
-or most played, and open a level in the editor or import a campaign. Share
-your own with **Share my level** / **Share my campaign** (or **Share to
-gallery** in the Level tab's Share dialog and the Campaign tab). Every item
-has a link (`…/#g=<id>`) that opens it straight in the online editor.
+or most played, **Play** one, open a level in the editor or import a
+campaign. Share your own with **Share my level** / **Share my campaign** (or
+**Share to gallery** in the Level tab's Share dialog and the Campaign tab).
 There are no accounts: you can delete what you shared from the same browser,
 and things several people report are hidden.
+
+The gallery also has its own page,
+<https://jbrotherman.github.io/worldbuilder2-level-editor/gallery.html>,
+which needs no game files to look around; shared links
+(`gallery.html#g=<id>`) open there. **Play** asks once for the folder your
+WorldBuilder2 folder is in (WorldBuilder too, if you have it), builds the
+level or campaign from that copy of the game, and saves it right next to it
+as `WorldBuilder2 - <title>`, ready to start. Browsers without a folder
+picker (Firefox, Safari) give a zip to unpack there instead. The local
+version's Play starts the game directly.
 
 The server is a Cloudflare Worker with a D1 database (`gallery/`):
 `node gallery/dev-server.js` runs it locally (Node's built-in SQLite stands

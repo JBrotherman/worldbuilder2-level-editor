@@ -36,6 +36,8 @@ try {
   check(listed.body.items.length === 1 && item.title === 'First Bricks' && item.data === levelText && item.info.width > 0, 'list includes it, with the level and its size');
   check(item.description === 'A gentle start.\nTwo lines.' && !('delete_hash' in item) && !('ip_hash' in item), 'keeps line breaks, hides secrets');
 
+  const peek = await call('GET', `/api/items/${up.body.id}?peek`);
+  check(peek.body.data === levelText && peek.body.downloads === 0, 'peek at it (no download counted)');
   const got = await call('GET', `/api/items/${up.body.id}`);
   check(got.body.data === levelText && got.body.downloads === 1, 'open it (counts a download)');
   check((await call('GET', '/api/items?sort=popular')).body.items[0].downloads === 1, 'popular sort sees the download');

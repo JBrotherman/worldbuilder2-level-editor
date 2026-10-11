@@ -93,7 +93,8 @@ function readLevelFile(file, terrainChars) {
 }
 
 // Patch titles, unlocks and levels from the campaign into a loaded game.
-function applyCampaign(g, c) {
+// readLevel(file, terrainChars) returns a mission's level text.
+function applyCampaign(g, c, readLevel = readLevelFile) {
   const orig = originals(g);
   const terrainChars = game.getText(g, 'terrainmap').split('\n').filter(Boolean).map((l) => l[0]);
   const titles = { ...orig.titles };
@@ -101,7 +102,7 @@ function applyCampaign(g, c) {
   for (const [slot, m] of Object.entries(c.missions)) {
     let title = m.title;
     if (m.level) {
-      const level = Level.parse(readLevelFile(m.level, terrainChars));
+      const level = Level.parse(readLevel(m.level, terrainChars));
       game.setText(g, slot, Level.gameText(level, terrainChars));
       title = title || level.meta.title || m.level;
     }
@@ -138,7 +139,48 @@ function buildCampaign({ freshProgress = true, unlockAll = false } = {}) {
   return dir;
 }
 
+// The game always unlocks mission 1.1, so single levels are played there.
+const PLAY_SLOT = 'map1.1';
+
+// Put a level (game text) in mission 1.1, with its title on the world map.
+function applyLevel(g, gameText, title) {
+  game.setText(g, PLAY_SLOT, gameText);
+  const names = game.getText(g, 'level names').split('\n');
+  const t = String(title || 'Custom Level').replace(/[\r\n]/g, ' ').slice(0, 40);
+  game.setText(g, 'level names', names.map((l) => (/^1\s+1\s/.test(l) ? `1 1 ${t}` : l)).join('\n'));
+}
+
+// Build a shared level file or .wb2campaign.json (e.g. from the gallery)
+// into outDir, leaving the saved campaign, levels and unit settings alone:
+// a campaign uses its own unit settings, if it has them.
+function buildShared({ type, title, data }, outDir) {
+  const g = game.load();
+  const terrainChars = game.getText(g, 'terrainmap').split('\n').filter(Boolean).map((l) => l[0]);
+  if (type === 'level') {
+    const level = Level.parse(String(data || ''));
+    if (!level.width || !level.height) throw Object.assign(new Error('That is not a WorldBuilder 2 level.'), { status: 400 });
+    applyLevel(g, Level.gameText(level, terrainChars), title || level.meta.title || level.name);
+  } else if (type === 'campaign') {
+    let c;
+    try { c = JSON.parse(data); } catch (e) { c = null; }
+    if (!c || c.format !== 'wb2-campaign' || typeof c.missions !== 'object') throw Object.assign(new Error('That is not a campaign file.'), { status: 400 });
+    if (typeof c.config === 'string') game.setText(g, 'config', c.config);
+    const levels = c.levels || {};
+    applyCampaign(g, { missions: c.missions }, (file, chars) => {
+      if (file.startsWith('wb1:')) return readLevelFile(file, chars);
+      if (typeof levels[file] !== 'string') throw Object.assign(new Error(`The campaign is missing its level "${file}".`), { status: 400 });
+      return levels[file];
+    });
+  } else throw Object.assign(new Error('Choose a level or a campaign.'), { status: 400 });
+  if (fs.existsSync(outDir)) fs.rmSync(outDir, { recursive: true });
+  const dir = game.writeBuild(g, outDir);
+  // Start without the progress of the game it was built from.
+  const prefs = path.join(dir, 'Prefs', PREFS_FILE);
+  if (fs.existsSync(prefs)) fs.unlinkSync(prefs);
+  return dir;
+}
+
 module.exports = {
   loadCampaign, saveCampaign, loadConfigOverride, saveConfigOverride,
-  originals, applyConfig, applyCampaign, buildCampaign, BUILD_DIR,
+  originals, applyConfig, applyCampaign, applyLevel, buildShared, buildCampaign, BUILD_DIR, PLAY_SLOT,
 };

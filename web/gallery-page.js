@@ -1,0 +1,101 @@
+// The gallery page (gallery.html): browse without any game files; Play
+// builds a level or campaign from the player's own WorldBuilder 2 and saves
+// it next to their WorldBuilder2 folder (or as a zip). The page itself is
+// editor/gallery.js; this is the part that needs the game tools.
+'use strict';
+const { createApi } = require('../tools/api');
+const web = require('./shared');
+
+const { el, nextFrame, hasFolderPicker } = web;
+
+// Set by play() when the player just chose the folder their games are in:
+// the build is saved there without asking again.
+let saveNextTo = null;
+
+const api = createApi({
+  launch: (outDir, kind, title) => {
+    const saveTo = saveNextTo;
+    saveNextTo = null;
+    setTimeout(() => web.showPlayDialog(outDir, kind, { title, saveTo }));
+    return {};
+  },
+});
+
+let storedLoaded = null;
+const loadStored = () => {
+  if (!storedLoaded) storedLoaded = web.loadStoredFiles().catch((e) => console.warn('No stored files:', e));
+  return storedLoaded;
+};
+
+// Asks for the game. Resolves to true once it's in this browser.
+function askForGame(item) {
+  return new Promise((resolve) => {
+    const d = web.dialog('dlgWebPlay');
+    const status = el('p', { class: 'wb2-status', role: 'status' });
+    let done = false;
+    const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+    const onPick = async (files, handle) => {
+      status.className = 'wb2-status';
+      status.textContent = 'Reading the game files…';
+      try {
+        const found = await web.importFolder(files);
+        if (!found.wb2) throw new Error('No WorldBuilder 2 in that folder. Choose the folder your WorldBuilder2 folder is in (or the WorldBuilder2 folder itself).');
+        await web.flush();
+        saveNextTo = handle; // with the folder picker: save the build right there
+        finish(true);
+      } catch (e) {
+        status.className = 'wb2-status error';
+        status.textContent = e.message;
+      }
+    };
+    const [pick, pickInput] = web.folderPicker(hasFolderPicker ? 'Choose that folder' : 'Choose your WorldBuilder2 folder', onPick, { mode: 'readwrite' });
+    const drop = el('div', { class: 'wb2-drop' },
+      el('div', { class: 'wb2-drop-icon', 'aria-hidden': 'true' }, '📁'),
+      el('div', { class: 'wb2-actions' }, pick, pickInput),
+      el('p', { class: 'muted' }, hasFolderPicker ? 'or drag your WorldBuilder2 folder here' : 'or drag your WorldBuilder2 folder here (this avoids your browser calling it an "upload")'));
+    web.dropTarget(drop, onPick);
+    d.replaceChildren(
+      el('h2', {}, `Play “${item.title}”`),
+      el('p', {}, `To play, the gallery puts the ${item.type === 'level' ? 'level' : 'campaign'} into a copy of your own WorldBuilder 2 (the game isn't included here).`),
+      el('p', {}, hasFolderPicker
+        ? 'Choose the folder your WorldBuilder2 folder is in (with WorldBuilder too, if you have it). The game is read from there, and the copy is saved next to it, ready to start.'
+        : 'Choose or drag in your WorldBuilder2 folder. You then get a zip to unpack next to it.'),
+      drop,
+      status,
+      el('p', { class: 'muted' }, 'The game files stay on your computer; they are only read by this page and kept in this browser, so the editor can use them too.'),
+      el('menu', {}, el('button', { type: 'button', onclick: () => { d.close(); finish(false); } }, 'Cancel')));
+    d.addEventListener('close', () => finish(false), { once: true });
+    if (!d.open) d.showModal();
+    pick.focus();
+  });
+}
+
+// item: { type, title, data } from the gallery.
+async function play(item) {
+  await loadStored();
+  if (!web.hasGame() && !(await askForGame(item))) return;
+  const d = web.dialog('dlgWebPlay');
+  d.replaceChildren(el('h2', {}, `Play “${item.title}”`), el('p', { class: 'wb2-loading-inline' }, 'Building your copy of the game…'));
+  if (!d.open) d.showModal();
+  await nextFrame();
+  if (!api.loadGame({ retry: true })) {
+    d.replaceChildren(el('h2', {}, 'The game could not be read'),
+      el('p', { class: 'wb2-status error' }, api.status().loadError || 'Your WorldBuilder 2 files could not be read.'),
+      el('menu', {}, el('button', { type: 'button', onclick: () => d.close() }, 'Close')));
+    return;
+  }
+  const r = api.handle('POST', '/api/shared/play', new URLSearchParams(), JSON.stringify({ type: item.type, title: item.title, data: item.data }));
+  if (r.status !== 200) {
+    d.replaceChildren(el('h2', {}, 'Could not build it'),
+      el('p', { class: 'wb2-status error' }, JSON.parse(r.body).error),
+      el('menu', {}, el('button', { type: 'button', onclick: () => d.close() }, 'Close')));
+  }
+}
+
+async function start() {
+  // editor/gallery.js picks this up.
+  window.WB2_GALLERY_HOST = { play };
+  window.WB2_WEB = { api, play, importFolder: web.importFolder };
+}
+
+module.exports = { start };

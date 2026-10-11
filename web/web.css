@@ -32,3 +32,5 @@
 .wb2-drop .wb2-actions { justify-content: center; margin: 8px 0 0; }
 .wb2-drop-icon { font-size: 34px; line-height: 1; margin-bottom: 6px; }
 #wb2Setup.dragging .wb2-drop { border-color: var(--accent); background: var(--panel-2); }
+.wb2-loading-inline { color: var(--muted); }
+.wb2-gallery-link { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }

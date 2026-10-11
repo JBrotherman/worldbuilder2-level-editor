@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WorldBuilder 2 Gallery</title>
+  <meta name="description" content="Levels and campaigns for LEGO WorldBuilder 2, made by players. Play them in your own copy of the game.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="web.css">
+</head>
+<body class="gallery-page">
+  <header class="topbar">
+    <div class="brand"><span class="brick"></span>WorldBuilder 2 Gallery</div>
+    <div class="doc"></div>
+    <nav class="actions">
+      <a class="button primary" href="index.html">Open the editor</a>
+    </nav>
+  </header>
+
+  <main class="page" id="galleryView"></main>
+
+  <dialog id="dlgConfirm">
+    <form method="dialog">
+      <h2 id="confirmTitle"></h2>
+      <p id="confirmText"></p>
+      <menu><button value="cancel">Cancel</button><button value="ok" class="primary" id="confirmOk">OK</button></menu>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="level.js"></script>
+  <script src="gallery-web.js"></script>
+  <script src="gallery.js"></script>
+</body>
+</html>

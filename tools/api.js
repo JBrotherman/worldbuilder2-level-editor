@@ -12,13 +12,14 @@ const wb1 = require('./wb1');
 const paths = require('./paths');
 
 const LEVELS_DIR = path.join(paths.ROOT, 'levels');
-// The game always unlocks mission 1.1, so custom levels are played there.
-const PLAY_SLOT = 'map1.1';
+const SHARED_BUILD_DIR = path.join(paths.ROOT, 'build', 'gallery');
 
 const fail = (status, message) => Object.assign(new Error(message), { status });
 
-// launch(outDir, kind): starts or hands over a finished build ("level" or
-// "campaign"); returns extra fields for the response.
+// launch(outDir, kind, title): starts or hands over a finished build
+// ("level", "campaign", or "shared-level"/"shared-campaign" for
+// a gallery item); returns extra
+// fields for the response.
 function createApi({ launch, log = console }) {
   // The game is loaded on first use, so the editor can start (and explain
   // what to do) when WorldBuilder 2 isn't there yet.
@@ -82,12 +83,9 @@ function createApi({ launch, log = console }) {
   function play({ text, title }) {
     const g = game.load();
     campaign.applyConfig(g);
-    game.setText(g, PLAY_SLOT, text);
-    const names = game.getText(g, 'level names').split('\n');
-    const t = String(title || 'Custom Level').replace(/[\r\n]/g, ' ').slice(0, 40);
-    game.setText(g, 'level names', names.map((l) => (/^1\s+1\s/.test(l) ? `1 1 ${t}` : l)).join('\n'));
+    campaign.applyLevel(g, text, title);
     const outDir = writeBuildOrExplain(() => game.writeBuild(g));
-    return { ok: true, slot: PLAY_SLOT, ...launch(outDir, 'level') };
+    return { ok: true, slot: campaign.PLAY_SLOT, ...launch(outDir, 'level') };
   }
 
   function playCampaign({ freshProgress, unlockAll }) {
@@ -162,6 +160,13 @@ function createApi({ launch, log = console }) {
     }
 
     if (p === '/api/play' && method === 'POST') return ok(play(parse(body)));
+
+    // Play a level or campaign from the gallery: { type, title, data }.
+    if (p === '/api/shared/play' && method === 'POST') {
+      const item = parse(body);
+      const outDir = writeBuildOrExplain(() => campaign.buildShared(item, SHARED_BUILD_DIR));
+      return ok({ ok: true, ...launch(outDir, item.type === 'level' ? 'shared-level' : 'shared-campaign', item.title) });
+    }
 
     const sprite = /^\/sprite\/(.+)\.png$/.exec(p);
     if (sprite) {

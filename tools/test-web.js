@@ -147,6 +147,23 @@ check(ask(webApi, 'POST', '/api/campaign/play', JSON.stringify({ freshProgress: 
 ask(nodeApi, 'POST', '/api/campaign/play', JSON.stringify({ freshProgress: true }));
 sameBuild('campaign');
 
+// Gallery items: a shared level file and a .wb2campaign.json.
+const missions = JSON.parse(fs.readFileSync(path.join(ROOT, 'campaign', 'campaign.json'), 'utf8')).missions;
+const levels = {};
+for (const m of Object.values(missions)) if (m.level) levels[m.level] = fs.readFileSync(path.join(ROOT, 'levels', `${m.level}.txt`), 'latin1');
+const shared = [
+  ['shared level', { type: 'level', title: 'Crab Cove', data: level }],
+  ['shared campaign', { type: 'campaign', title: 'Both', data: JSON.stringify({ format: 'wb2-campaign', version: 1, missions, levels, config: null }) }],
+];
+for (const [what, item] of shared) {
+  t = Date.now();
+  const r = ask(webApi, 'POST', '/api/shared/play', JSON.stringify(item));
+  check(r.status === 200, `browser version builds a ${what} (${Date.now() - t} ms)`);
+  ask(nodeApi, 'POST', '/api/shared/play', JSON.stringify(item));
+  sameBuild(what);
+}
+check(ask(webApi, 'POST', '/api/shared/play', JSON.stringify({ type: 'campaign', data: '{}' })).status === 400, 'a broken campaign file is refused');
+
 // Zip: Node's zlib must read what the browser's deflate wrote.
 const zip = web.load('tools/zip.js');
 const data = toWeb(fs.readFileSync(path.join(wb2Dir, 'Launcher.exe')));
