@@ -1,10 +1,9 @@
 // Browser version of the editor: runs the same API as tools/server.js inside
 // the page. The visitor's own WorldBuilder 2 files, levels, campaign and unit
 // settings are kept in this browser (IndexedDB) and never uploaded. Without
-// the game files the editor opens in a preview (terrain only, in colours)
-// under a window asking for them; Play, the Campaign and Units tabs ask
-// again. "Play" builds the game in the page and saves it to a folder
-// (Chrome/Edge) or as a zip, to start Launcher.exe.
+// the game files the editor opens under a window asking for them, which
+// only goes away once they're added. "Play" builds the game in the page and
+// saves it to a folder (Chrome/Edge) or as a zip, to start Launcher.exe.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -103,17 +102,20 @@ function overlay() {
     o = el('div', { id: 'wb2Setup', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'wb2SetupTitle' });
     document.body.append(o);
     web.dropTarget(o, (files) => { if (setupDrop) setupDrop(files); });
-    // A click on the dimmed editor around the window, or Escape, closes it.
-    o.addEventListener('click', (e) => { if (e.target === o && o.dismiss) o.dismiss(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !o.hidden && o.dismiss) o.dismiss(); });
+    // While it's open, the editor's keyboard shortcuts stay off (typing and
+    // buttons in the window still work: those are default actions).
+    window.addEventListener('keydown', (e) => { if (!o.hidden) e.stopPropagation(); }, true);
   }
   o.hidden = false;
+  // The editor behind can't be clicked or tabbed to.
+  for (const c of document.body.children) if (c !== o && c.tagName !== 'SCRIPT') c.inert = true;
   return o;
 }
 
 function hideOverlay() {
   const o = $('#wb2Setup');
-  if (o) { o.hidden = true; o.dismiss = null; }
+  if (o) o.hidden = true;
+  for (const c of document.body.children) c.inert = false;
   setupDrop = null;
 }
 
@@ -121,7 +123,6 @@ function hideOverlay() {
 function showLoading(text) {
   const o = overlay();
   o.className = '';
-  o.dismiss = null;
   o.replaceChildren(el('div', { class: 'wb2-card' }, el('p', { class: 'wb2-loading' }, text)));
 }
 
@@ -132,13 +133,13 @@ const HEADINGS = {
   units: 'The Units tab needs your game files',
 };
 
-// The window over the editor asking for the game files. done(true) once
-// they're added and loaded, done(false) when it's closed.
+// The window over the editor asking for the game files. It can't be closed:
+// without the game's pictures and units the editor isn't usable (the way
+// out is back to the gallery). done(true) once they're added and loaded.
 function showSetup({ reason = 'button', error = null, done }) {
   const o = overlay();
   o.className = 'modal';
   const finish = (ok) => { hideOverlay(); done(ok); };
-  o.dismiss = () => finish(false);
   const status = el('p', { class: 'wb2-status' + (error ? ' error' : ''), role: 'status' }, error || '');
   let wantWb1 = null;
   const onPick = async (files) => {
@@ -183,11 +184,10 @@ function showSetup({ reason = 'button', error = null, done }) {
   }, { primary: false });
 
   const intro = reason === 'start'
-    ? el('p', { class: 'wb2-lead' }, 'Make your own missions and campaigns for LEGO WorldBuilder 2, and play them in the real game. For the game\'s pictures, vehicles, buildings and to play, the editor uses your own copy of WorldBuilder 2: show it where it is. Or look around the editor first.')
+    ? el('p', { class: 'wb2-lead' }, 'Make your own missions and campaigns for LEGO WorldBuilder 2, and play them in the real game. For the game\'s pictures, vehicles, buildings and to play, the editor uses your own copy of WorldBuilder 2: show it where it is, once.')
     : el('p', { class: 'wb2-lead' }, 'The editor uses your own copy of WorldBuilder 2 for the game\'s pictures, vehicles, buildings and rules, and to play. Show it where your game is, once.');
 
   o.replaceChildren(el('div', { class: 'wb2-card' },
-    el('button', { type: 'button', class: 'wb2-close', title: 'Close (Esc)', 'aria-label': 'Close', onclick: o.dismiss }, '×'),
     el('h1', { id: 'wb2SetupTitle' }, el('span', { class: 'brick' }), HEADINGS[reason] || 'Add your game files'),
     intro,
     el('p', {}, 'The folder with ', el('code', {}, 'Launcher.exe'), ' and ', el('code', {}, 'worldbuilder2.dcr'), ' in it, or the folder above it:'),
@@ -201,14 +201,14 @@ function showSetup({ reason = 'button', error = null, done }) {
       el('p', {}, 'It adds the scorpion and T-Rex animations and its 60 missions as templates. Choose its folder before your WorldBuilder 2 folder, or drag both folders in together.'),
       el('div', { class: 'wb2-actions' }, pick1, pick1Input, wb1Note)),
     el('div', { class: 'wb2-card-footer' },
-      el('button', { type: 'button', onclick: o.dismiss }, reason === 'start' ? 'Look around the editor first' : 'Not now')),
+      el('a', { class: 'button', href: './' }, '← Back to the gallery')),
     el('p', { class: 'muted wb2-legal' }, 'LEGO and WorldBuilder are trademarks of the LEGO Group, which does not make or endorse this editor. The game is not included.')));
   setupDrop = onPick;
   pick.focus();
 }
 
 // Asks for the game files (once at a time). Resolves to true once they're
-// loaded, false if the window was closed.
+// loaded.
 let gamePrompt = null;
 function requestGame(reason = 'button') {
   if (gameLoaded) return Promise.resolve(true);
