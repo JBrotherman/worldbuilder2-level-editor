@@ -13,3 +13,4 @@ levels/*
 !levels/Brickwood *.txt
 !levels/Brickton *.txt
 campaign/campaign.before-*.json
+.wrangler/

@@ -917,6 +917,16 @@
     tab: () => currentTab,
     // Open a saved level in the Level tab.
     async editLevel(file) { showTab('level'); await openCustom(file); },
+    // Open level text (e.g. from the gallery) as a new, unsaved level.
+    async openLevelText(text) {
+      if (!(await confirmDiscard())) return false;
+      const lv = Level.parse(text);
+      if (!lv.width || !lv.height) { toast('That is not a WorldBuilder 2 level.', true); return false; }
+      loadLevel(lv, null, { dirty: true });
+      showTab('level');
+      return true;
+    },
+    levelText: () => Level.serialize(state.level, terrainChars),
   };
   buildPalette();
   setTool('select');

@@ -13,6 +13,7 @@
       <button role="tab" data-tab="level" aria-selected="true">Level</button>
       <button role="tab" data-tab="campaign" aria-selected="false">Campaign</button>
       <button role="tab" data-tab="units" aria-selected="false">Units</button>
+      <button role="tab" data-tab="gallery" aria-selected="false">Gallery</button>
     </nav>
     <div class="doc" data-for-tab="level">
       <span id="docName">Untitled</span><span id="dirtyMark" class="dirty" hidden>●</span>
@@ -31,10 +32,13 @@
     <nav class="actions" data-for-tab="campaign" id="campaignActions" hidden></nav>
     <div class="doc" data-for-tab="units" hidden></div>
     <nav class="actions" data-for-tab="units" id="unitsActions" hidden></nav>
+    <div class="doc" data-for-tab="gallery" hidden></div>
+    <nav class="actions" data-for-tab="gallery" id="galleryActions" hidden></nav>
   </header>
 
   <main class="page" id="campaignView" data-for-tab="campaign" hidden></main>
   <main class="page" id="unitsView" data-for-tab="units" hidden></main>
+  <main class="page" id="galleryView" data-for-tab="gallery" hidden></main>
 
   <main class="layout" data-for-tab="level">
     <aside class="palette" id="palette" aria-label="Palette"></aside>
@@ -178,8 +182,21 @@
       <p class="muted" id="shareInfo"></p>
       <menu>
         <button type="button" id="btnDownloadLevel" class="left">Download file</button>
+        <button type="button" id="btnGalleryShare" title="Share it in the online gallery for everyone">Share to gallery</button>
         <button value="cancel">Close</button><button type="button" id="btnCopyCode" class="primary">Copy code</button>
       </menu>
+    </form>
+  </dialog>
+
+  <dialog id="dlgGalleryShare">
+    <form method="dialog">
+      <h2>Share in the gallery</h2>
+      <p class="muted">Everyone can see, play and download what you share.</p>
+      <label>Title <input name="title" maxlength="60" required></label>
+      <label>Your name <input name="author" maxlength="40" placeholder="Anonymous"></label>
+      <label>Description <textarea name="description" rows="4" maxlength="600" placeholder="What is it about? Any tips?"></textarea></label>
+      <label class="check"><input type="checkbox" name="own" required> I made this, or have permission to share it</label>
+      <menu><button value="cancel" formnovalidate>Cancel</button><button value="ok" class="primary">Share</button></menu>
     </form>
   </dialog>
 
@@ -199,5 +216,6 @@
   <script src="app.js"></script>
   <script src="campaign.js"></script>
   <script src="units.js"></script>
+  <script src="gallery.js"></script>
 </body>
 </html>

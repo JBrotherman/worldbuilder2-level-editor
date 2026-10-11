@@ -22,6 +22,9 @@
     el = api.el;
     api.dirtyChecks.push(() => loaded && JSON.stringify(missions) !== savedJson);
     buildActions();
+    // For the gallery (gallery.js).
+    api.campaignFile = campaignFile;
+    api.importCampaign = importCampaign;
     window.addEventListener('wb2:tab', (e) => { if (e.detail === 'campaign') load(); });
     if (api.tab() === 'campaign') load();
     window.addEventListener('keydown', (e) => {
@@ -36,6 +39,7 @@
     bar.append(
       el('button', { title: 'Download this campaign, with its levels and unit settings, as one file', onclick: exportCampaign }, 'Export'),
       el('button', { title: 'Load a campaign file', onclick: () => importInput.click() }, 'Import'),
+      el('button', { title: 'Share this campaign in the online gallery', onclick: () => api.shareToGallery('campaign') }, 'Share to gallery'),
       el('button', { title: 'Put every mission back to the original game', onclick: resetAll }, 'Reset'),
       el('button', { title: 'Save (Ctrl+S)', onclick: save }, 'Save'),
       el('span', { class: 'sep' }),
@@ -273,6 +277,11 @@
   // Export: one JSON file with the mission setup, every level it uses and the
   // unit settings (if tuned).
   async function exportCampaign() {
+    api.downloadFile('my-campaign.wb2campaign.json', await campaignFile(), 'application/json');
+  }
+
+  async function campaignFile() {
+    if (!loaded) await load();
     const levels = {};
     for (const mm of Object.values(missions)) {
       if (!mm.level) continue;
@@ -281,15 +290,17 @@
     }
     const cfg = await fetch('/api/config').then((r) => r.json());
     const data = { format: 'wb2-campaign', version: 1, missions, levels, config: cfg.tuned ? cfg.text : null };
-    api.downloadFile('my-campaign.wb2campaign.json', JSON.stringify(data, null, 2), 'application/json');
+    return JSON.stringify(data, null, 2);
   }
 
+  // Returns true when the campaign was imported.
   async function importCampaign(text) {
+    if (!loaded) await load();
     let data;
-    try { data = JSON.parse(text); } catch (e) { api.toast('That file is not a campaign file.', true); return; }
-    if (!data || data.format !== 'wb2-campaign' || typeof data.missions !== 'object') { api.toast('That file is not a campaign file.', true); return; }
+    try { data = JSON.parse(text); } catch (e) { api.toast('That file is not a campaign file.', true); return false; }
+    if (!data || data.format !== 'wb2-campaign' || typeof data.missions !== 'object') { api.toast('That file is not a campaign file.', true); return false; }
     if ((Object.keys(missions).length || savedJson !== '{}') &&
-      !(await api.confirmDialog('Replace your campaign?', 'The imported campaign replaces your current mission setup. Its levels are added to your levels folder (renamed if a different level already has the same name).', 'Import'))) return;
+      !(await api.confirmDialog('Replace your campaign?', 'The imported campaign replaces your current mission setup. Its levels are added to your levels folder (renamed if a different level already has the same name).', 'Import'))) return false;
 
     await refreshFiles();
     const rename = {};
@@ -320,6 +331,7 @@
     await loadAssignedLevels();
     await save();
     api.toast('Campaign imported.');
+    return true;
   }
 
   if (window.wb2 && window.wb2.ready) init();

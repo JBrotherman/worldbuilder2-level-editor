@@ -118,6 +118,21 @@ rules. Changed entries get a dot; each can be reset to the original. Saved
 settings (`campaign/config.txt`) apply to **Play in game** and **Play
 campaign**, and the level checks use them too.
 
+## Gallery tab
+
+Browse the levels and campaigns other players shared: search, sort by newest
+or most played, and open a level in the editor or import a campaign. Share
+your own with **Share my level** / **Share my campaign** (or **Share to
+gallery** in the Level tab's Share dialog and the Campaign tab). Every item
+has a link (`…/#g=<id>`) that opens it straight in the online editor.
+There are no accounts: you can delete what you shared from the same browser,
+and things several people report are hidden.
+
+The server is a Cloudflare Worker with a D1 database (`gallery/`):
+`node gallery/dev-server.js` runs it locally (Node's built-in SQLite stands
+in for D1) and `node gallery/test.js` tests it. `gallery/wrangler.toml`
+lists the deploy steps.
+
 ## Bigger game window
 
 The game itself is fixed at 610×440. **Play in game** (and **`Play WorldBuilder

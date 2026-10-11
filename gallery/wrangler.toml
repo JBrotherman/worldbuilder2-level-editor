@@ -1,0 +1,13 @@
+# Cloudflare Worker for the level gallery. Deploy from this folder:
+#   npx wrangler d1 create wb2-gallery        (once; put its id below)
+#   npx wrangler d1 execute wb2-gallery --remote --file schema.sql
+#   npx wrangler deploy
+# Secrets (once): npx wrangler secret put ADMIN_TOKEN / IP_SALT
+name = "wb2-gallery"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wb2-gallery"
+database_id = "set-after-d1-create"

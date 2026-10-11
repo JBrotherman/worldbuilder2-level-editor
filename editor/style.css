@@ -251,3 +251,24 @@ textarea.raw { width: 100%; font: 12px/1.35 ui-monospace, Consolas, monospace; }
 textarea.raw.bad { border-color: var(--red); }
 .open-list li.group { cursor: default; background: #12141a; color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; position: sticky; top: 0; }
 .open-list li.group:hover { background: #12141a; }
+
+/* Gallery tab */
+dialog label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); }
+#dlgGalleryShare textarea { font: inherit; width: min(480px, 80vw); }
+.gallery-head { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 6px; }
+.gallery-head input[type=search] { flex: 1 1 260px; max-width: 480px; }
+.gallery-note { margin: 18px 0; }
+.gallery-note.error { color: var(--red); }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
+.gallery-card { display: flex; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
+.gallery-thumb { flex: none; width: 112px; height: 112px; object-fit: contain; image-rendering: pixelated; background: var(--panel-2); border-radius: 6px; }
+.gallery-thumb.campaign { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; }
+.gallery-thumb.campaign span { font-size: 30px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+.gallery-body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.gallery-body h3 { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.gallery-badge { margin-left: 8px; font-size: 11px; font-weight: 600; color: var(--accent-ink); background: var(--accent); border-radius: 4px; padding: 1px 5px; vertical-align: 2px; }
+.gallery-meta { color: var(--muted); font-size: 12px; }
+.gallery-desc { margin: 2px 0; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.gallery-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+.gallery-actions .subtle { color: var(--muted); }
+.gallery-more { margin: 16px 0; text-align: center; }
