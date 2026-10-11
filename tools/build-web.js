@@ -98,6 +98,8 @@ function build(OUT = DEFAULT_OUT) {
     fs.copyFileSync(path.join(ROOT, 'editor', name), path.join(OUT, name));
   }
   fs.copyFileSync(path.join(ROOT, 'web', 'web.css'), path.join(OUT, 'web.css'));
+  // Shown behind the game files window (a screenshot of the editor).
+  fs.copyFileSync(path.join(ROOT, 'web', 'editor-preview.jpg'), path.join(OUT, 'editor-preview.jpg'));
   // The gallery is the front page (index.html); the editor is editor.html.
   fs.renameSync(path.join(OUT, 'index.html'), path.join(OUT, 'editor.html'));
   const editorFile = path.join(OUT, 'editor.html');

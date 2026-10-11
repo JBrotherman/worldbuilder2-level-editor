@@ -925,6 +925,7 @@
     Object.assign(catalog, { configTuned: fresh.configTuned, terrain: fresh.terrain, levels: fresh.levels, sprites: fresh.sprites, preview: !!fresh.preview });
     view.terrainByChar = Object.fromEntries(catalog.terrain.map((t) => [t.char, t.name]));
     view.images.clear();
+    view.requestDraw();
     buildPalette();
     setBrush(state.brush);
     renderAll();

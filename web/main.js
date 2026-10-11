@@ -112,9 +112,24 @@ function overlay() {
   return o;
 }
 
+// Behind the game files window: a picture of the editor as it is with the
+// game files (web/editor-preview.jpg), under the real top bar.
+function showEditorPicture() {
+  let pic = $('#wb2EditorPicture');
+  if (!pic) {
+    pic = el('div', { id: 'wb2EditorPicture', 'aria-hidden': 'true' });
+    document.body.append(pic);
+  }
+  const top = $('.topbar');
+  pic.style.top = `${top ? Math.round(top.getBoundingClientRect().bottom) : 0}px`;
+  pic.hidden = false;
+}
+
 function hideOverlay() {
   const o = $('#wb2Setup');
   if (o) o.hidden = true;
+  const pic = $('#wb2EditorPicture');
+  if (pic) pic.remove();
   for (const c of document.body.children) c.inert = false;
   setupDrop = null;
 }
@@ -137,6 +152,7 @@ const HEADINGS = {
 // without the game's pictures and units the editor isn't usable (the way
 // out is back to the gallery). done(true) once they're added and loaded.
 function showSetup({ reason = 'button', error = null, done }) {
+  showEditorPicture();
   const o = overlay();
   o.className = 'modal';
   const finish = (ok) => { hideOverlay(); done(ok); };

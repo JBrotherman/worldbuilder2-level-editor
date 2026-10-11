@@ -60,3 +60,6 @@ button.link:hover { background: none; color: #7db8ff; }
 .wb2-close:hover { color: var(--text); border-color: var(--line); }
 .wb2-card h1 { padding-right: 36px; }
 .wb2-card-footer { display: flex; justify-content: flex-end; margin-top: 16px; }
+/* A picture of the editor with the game files, behind the game files window. */
+#wb2EditorPicture { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--bg) url(editor-preview.jpg) left top / cover no-repeat; }
+#wb2Setup.modal { background: rgba(8, 10, 14, .5); }
