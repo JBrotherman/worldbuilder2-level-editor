@@ -240,6 +240,7 @@
     // "⋯" menu with the less common actions.
     const menu = el('details', { class: 'row-menu' });
     const menuItem = (label, title, fn) => el('button', { type: 'button', title, onclick: () => { menu.open = false; fn(); } }, label);
+    menu.addEventListener('toggle', () => { if (menu.open) placeMenu(menu); });
     menu.append(
       el('summary', { title: 'More', 'aria-label': `More for ${item.title}` }, '⋯'),
       el('div', { class: 'row-menu-items' },
@@ -265,10 +266,26 @@
         menu));
   }
 
-  // Close "⋯" menus when clicking elsewhere.
-  document.addEventListener('click', (e) => {
-    for (const m of document.querySelectorAll('.row-menu[open]')) if (!m.contains(e.target)) m.open = false;
-  });
+  // The "⋯" menu floats above the page (the table and the scrolling page
+  // would cut it off), under its button, or above it near the bottom.
+  function placeMenu(menu) {
+    for (const m of document.querySelectorAll('.row-menu[open]')) if (m !== menu) m.open = false;
+    const items = menu.querySelector('.row-menu-items');
+    const button = menu.querySelector('summary').getBoundingClientRect();
+    const { offsetWidth: w, offsetHeight: h } = items;
+    const below = button.bottom + 4 + h <= window.innerHeight - 8;
+    items.style.top = `${below ? button.bottom + 4 : Math.max(8, button.top - 4 - h)}px`;
+    items.style.left = `${Math.max(8, Math.min(button.right - w, window.innerWidth - w - 8))}px`;
+  }
+
+  // Close "⋯" menus when clicking elsewhere, scrolling or resizing.
+  const closeMenus = (except) => {
+    for (const m of document.querySelectorAll('.row-menu[open]')) if (!except || !m.contains(except)) m.open = false;
+  };
+  document.addEventListener('click', (e) => closeMenus(e.target));
+  document.addEventListener('scroll', () => closeMenus(), true);
+  window.addEventListener('resize', () => closeMenus());
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
 
   // A little map of a level.
   function drawThumb(canvas) {

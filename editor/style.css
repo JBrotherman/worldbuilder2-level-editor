@@ -305,7 +305,7 @@ a.button.primary:hover { background: #ffd94a; }
 .row-menu summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 26px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); font-weight: 700; }
 .row-menu summary::-webkit-details-marker { display: none; }
 .row-menu[open] summary { border-color: var(--accent); }
-.row-menu-items { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; display: flex; flex-direction: column; min-width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.row-menu-items { position: fixed; z-index: 60; display: flex; flex-direction: column; min-width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
 .row-menu-items button { background: none; border: none; text-align: left; padding: 7px 10px; border-radius: 5px; }
 .row-menu-items button:hover { background: var(--panel-2); }
 .gallery-featured .gallery-table { border-color: var(--accent); }
