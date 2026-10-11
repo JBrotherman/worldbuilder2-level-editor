@@ -115,6 +115,19 @@ function build(OUT = DEFAULT_OUT) {
   fs.writeFileSync(path.join(OUT, 'gallery.html'), '<!doctype html><meta charset="utf-8"><title>WorldBuilder 2 Gallery</title>'
     + '<script>location.replace("./" + location.hash)</script><a href="./">WorldBuilder 2 Gallery</a>\n');
   fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
+  // Browsers keep files for a while (GitHub Pages: 10 minutes); a fingerprint
+  // of each script and stylesheet in its URL makes them fetch new versions
+  // straight away, so a page never mixes old and new files.
+  for (const page of ['index.html', 'editor.html']) {
+    const file = path.join(OUT, page);
+    const html = fs.readFileSync(file, 'utf8').replace(/(src|href)="([\w-]+\.(?:js|css))"/g, (m, attr, name) => {
+      const asset = path.join(OUT, name);
+      if (!fs.existsSync(asset)) return m;
+      const hash = require('crypto').createHash('sha256').update(fs.readFileSync(asset)).digest('hex').slice(0, 10);
+      return `${attr}="${name}?v=${hash}"`;
+    });
+    fs.writeFileSync(file, html);
+  }
   return OUT;
 }
 
