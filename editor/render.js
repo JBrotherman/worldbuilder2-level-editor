@@ -43,7 +43,7 @@
       if (!img) {
         img = new Image();
         img.onload = () => this.requestDraw();
-        img.src = `/sprite/${encodeURIComponent(name)}.png`;
+        img.src = window.WB2_SPRITE_URL ? window.WB2_SPRITE_URL(name) : `/sprite/${encodeURIComponent(name)}.png`;
         this.images.set(name, img);
       }
       return img.complete && img.naturalWidth ? img : null;

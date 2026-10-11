@@ -1,0 +1,29 @@
+/* Browser version: welcome screen, game files and play dialogs. */
+#wb2Setup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--bg);
+  overflow: auto;
+  padding: 32px 16px 48px;
+}
+.wb2-card { max-width: 660px; margin: 0 auto; font-size: 14px; line-height: 1.55; }
+.wb2-card h1 { font-size: 22px; margin: 0 0 6px; display: flex; align-items: center; gap: 10px; }
+.wb2-card h2 { font-size: 15px; margin: 26px 0 8px; }
+.wb2-card ul { padding-left: 20px; margin: 6px 0; }
+.wb2-card li { margin: 4px 0; }
+.wb2-card a { color: var(--blue); }
+.wb2-card code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; background: var(--panel-2); border-radius: 4px; padding: 1px 5px; }
+.wb2-card details { margin-top: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.wb2-card summary { cursor: pointer; font-weight: 600; }
+.wb2-lead { color: var(--muted); margin: 0 0 8px; }
+.wb2-legal { margin-top: 28px; font-size: 12px; }
+.wb2-loading { color: var(--muted); font-size: 15px; margin-top: 30vh; text-align: center; }
+.wb2-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 4px; }
+.wb2-actions button { padding: 7px 14px; }
+.wb2-status { min-height: 1.4em; margin: 8px 0 0; }
+.wb2-status.error { color: var(--red); }
+.wb2-play { width: min(520px, 92vw); line-height: 1.5; }
+.wb2-play p { margin: 6px 0; }
+.wb2-gamefiles { margin-left: 8px; }
+.muted { color: var(--muted); }

@@ -51,7 +51,8 @@
   const recipeText = (def) => def && def.recipe
     ? Object.entries(def.recipe).filter(([, n]) => n > 0).map(([c, n]) => `${n} ${c}`).join(' + ')
     : '';
-  const spriteUrl = (name) => `/sprite/${encodeURIComponent(name)}.png`;
+  // The browser version renders sprites itself (web/main.js).
+  const spriteUrl = (name) => (window.WB2_SPRITE_URL ? window.WB2_SPRITE_URL(name) : `/sprite/${encodeURIComponent(name)}.png`);
 
   function toast(msg, isError = false, ms = 4000) {
     const t = $('#toast');
@@ -837,8 +838,11 @@
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error);
-      toast('Game launching… Start the game and click the first mission on the world map to play this level.'
-        + (body.scaled ? ' Resize the window to scale it; F11 toggles fullscreen.' : ''), false, 9000);
+      // The browser version answers with its own message (or none).
+      if (body.message !== undefined) { if (body.message) toast(body.message, false, 9000); } else {
+        toast('Game launching… Start the game and click the first mission on the world map to play this level.'
+          + (body.scaled ? ' Resize the window to scale it; F11 toggles fullscreen.' : ''), false, 9000);
+      }
     } catch (e) {
       toast(e.message, true, 7000);
     } finally {

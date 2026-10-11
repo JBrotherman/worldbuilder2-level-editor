@@ -254,7 +254,7 @@
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error);
-      api.toast('Campaign launching… Press Start Game to get to the world map.', false, 7000);
+      if (body.message !== undefined) { if (body.message) api.toast(body.message, false, 7000); } else api.toast('Campaign launching… Press Start Game to get to the world map.', false, 7000);
     } catch (e) {
       api.toast(e.message, true, 7000);
     } finally {

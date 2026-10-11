@@ -4,6 +4,16 @@ A browser-based level editor for LEGO WorldBuilder 2 (the Shockwave game).
 Build a level, press **Play in game**, and it launches in the real game. It
 comes with two 12-mission campaigns: Brickwood Valley and Brickton City.
 
+**Use it online:** <https://jbrotherman.github.io/worldbuilder2-level-editor/>.
+Nothing to install: choose your WorldBuilder 2 folder once, and the editor
+runs entirely in your browser (the game files stay on your computer). To
+play, it gives you a ready-to-play copy of the game to save to a folder or
+download as a zip. Your levels are kept in that browser, so use Share and
+Export for backups.
+
+Or run it on your own PC, as below: that version starts the game for you, in
+a resizable window.
+
 ## Getting started
 
 **You need:**
@@ -140,6 +150,11 @@ compressed). Levels are plain-text cast members (`map1.1` … `map2.12`), and
 | `tools/server.js` | Editor server and API |
 | `tools/extract.js` | Dump all game text (levels, config) to `extracted/` |
 | `tools/package.js` | Write a release zip to `build/` (no game files) |
+| `tools/api.js` | The editor's API, shared by the server and the browser version |
+| `web/` | Browser version: stand-ins for Node's fs, path, zlib and Buffer, and the page glue |
+| `tools/build-web.js` | Build the browser version into `build/web/` |
+| `tools/serve-web.js` | Try the browser version locally (`node tools/serve-web.js`) |
+| `tools/test-web.js` | Check the browser version gives the same results as the local one |
 | `editor/` | The editor (plain HTML/JS, no build step) |
 
 The original game files are never modified. `WorldBuilder2/`, `WorldBuilder/`,
@@ -152,6 +167,16 @@ local settings, and output that can be regenerated).
 committed files from `editor/`, `tools/`, `levels/`, `campaign/`, the .bat
 files, this README and the LICENSE. It refuses to include game files, and
 lists what it packed; `node tools/package.js --list <zip>` lists a zip.
+
+## The browser version
+
+`node tools/build-web.js` bundles the editor and the tools into
+`build/web/` (no build tools needed). In the browser the same code runs on
+stand-ins for Node's modules (`web/node/`): an in-memory file system saved to
+IndexedDB, and a small zlib. `node tools/test-web.js` checks that it gives
+the same answers, sprites and game builds as the local version.
+`.github/workflows/pages.yml` publishes it to GitHub Pages on every push to
+`main`.
 
 ## Level format quick reference
 
