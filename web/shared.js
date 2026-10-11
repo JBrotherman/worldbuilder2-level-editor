@@ -296,6 +296,50 @@ function dropTarget(target, onDrop) {
   });
 }
 
+// Whether the game is stored in this browser, without loading it.
+async function hasStoredGame() {
+  try { return (await idb('files', 'readonly', (s) => s.count(paths.wb2Dcr()))) > 0; } catch (e) { return false; }
+}
+
+// The game files kept in this browser: choose them again, add the original
+// WorldBuilder, or remove them. The stored files must be loaded first.
+function showGameFiles() {
+  const d = dialog('dlgWebPlay');
+  const status = el('p', { class: 'wb2-status', role: 'status' });
+  const reloadAfter = (fn) => async (files) => {
+    status.className = 'wb2-status';
+    status.textContent = 'Reading…';
+    try {
+      await fn(files);
+      await flush();
+      location.reload();
+    } catch (e) {
+      status.className = 'wb2-status error';
+      status.textContent = e.message;
+    }
+  };
+  const [pick2, in2] = folderPicker('Choose WorldBuilder 2 again', reloadAfter(async (files) => {
+    if (!(await importFolder(files)).wb2) throw new Error('No worldbuilder2.dcr there.');
+  }), { primary: false });
+  const [pick1, in1] = folderPicker(hasWb1() ? 'Choose WorldBuilder again' : 'Add the original WorldBuilder', reloadAfter(async (files) => {
+    if (!(await importFolder(files, { wb1Only: true })).wb1) throw new Error('No worldbuilder.dcr there.');
+  }), { primary: false });
+  const forget = el('button', { type: 'button', onclick: async () => {
+    if (!confirm('Remove the game files from this browser? Your levels and campaign stay.')) return;
+    for (const dir of [GAME2_DIR, GAME1_DIR]) if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true });
+    await flush();
+    location.reload();
+  } }, 'Remove game files');
+  d.replaceChildren(
+    el('h2', {}, 'Game files'),
+    el('p', {}, 'WorldBuilder 2: ✓ added. Original WorldBuilder: ', hasWb1() ? '✓ added.' : 'not added (optional).'),
+    el('p', { class: 'muted' }, 'They are kept in this browser only, for the gallery and the editor. Your levels, campaign and unit settings are kept here too: use Share and Export for backups.'),
+    el('div', { class: 'wb2-actions' }, pick2, in2, pick1, in1, forget),
+    status,
+    el('menu', {}, el('button', { type: 'button', onclick: () => d.close() }, 'Close')));
+  if (!d.open) d.showModal();
+}
+
 // ------------------------------------------------------------ playing
 
 // Where each kind of build is saved, inside the folder the player chooses.
@@ -417,5 +461,5 @@ async function showPlayDialog(outDir, kind, { title = '', saveTo = null } = {}) 
 module.exports = {
   ROOT, GAME2_DIR, GAME1_DIR, idb, loadStoredFiles, flush, savedHandle, saveHandle,
   $, el, nextFrame, hasFolderPicker, download, dialog,
-  hasGame, hasWb1, importFolder, readDirectoryHandle, folderPicker, zipPicker, gameHelp, dropTarget, showPlayDialog,
+  hasGame, hasWb1, hasStoredGame, showGameFiles, importFolder, readDirectoryHandle, folderPicker, zipPicker, gameHelp, dropTarget, showPlayDialog,
 };

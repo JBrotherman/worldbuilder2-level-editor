@@ -47,3 +47,8 @@ button.link:hover { background: none; color: #7db8ff; }
 .gallery-guide ol { margin: 8px 0 4px; padding-left: 22px; }
 .gallery-guide li { margin: 4px 0; }
 .gallery-guide .wb2-help { background: var(--panel-2); }
+.tabs a.tab-link { padding: 4px 14px; border-radius: 6px; color: var(--muted); text-decoration: none; }
+.tabs a.tab-link:hover { color: var(--text); background: var(--panel-2); }
+.tabs a.tab-link.active { background: var(--panel-2); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.gallery-page .topbar .doc { flex: 1; }
+#btnGameFiles.has-game { color: var(--muted); }

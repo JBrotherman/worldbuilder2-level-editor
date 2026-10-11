@@ -83,6 +83,20 @@ try {
   check(lastStatus === 429, 'the 11th upload in an hour is refused');
   check((await call('POST', '/api/items', { body: { type: 'level', title: 'other', data: levelText }, ip: '5.5.5.5' })).status === 201, 'others can still share');
 
+  // Sorting on every column.
+  await call('POST', '/api/items', { body: { type: 'campaign', title: 'Sort campaign', author: 'zed', data: campaign }, ip: '6.6.6.6' });
+  const titles = async (q) => (await call('GET', `/api/items?${q}`)).body.items.map((i) => i.title);
+  const byTitle = await titles('sort=title');
+  check(byTitle.join() === [...byTitle].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })).join(), 'sort by name (A–Z)');
+  check((await titles('sort=title&dir=desc')).join() === [...byTitle].reverse().join(), 'sort by name (Z–A)');
+  check((await titles('sort=missions'))[0] === 'Sort campaign', 'sort by missions puts the campaign first');
+  check((await call('GET', '/api/items?sort=missions&dir=asc')).body.items[0].type === 'level', 'and levels first the other way');
+  const authors = (await call('GET', '/api/items?sort=author')).body.items.map((i) => i.author.toLowerCase());
+  check(authors.join() === [...authors].sort().join(), 'sort by creator');
+  const plays = (await call('GET', '/api/items?sort=downloads')).body.items.map((i) => i.downloads);
+  check(plays.join() === [...plays].sort((a, b) => b - a).join(), 'sort by plays');
+  check((await call('GET', '/api/items?sort=bogus')).status === 200, 'unknown sort falls back to newest');
+
   const pre = await fetch(BASE + '/api/items', { method: 'OPTIONS', headers: { Origin: 'https://evil.example' } });
   check(!pre.headers.get('access-control-allow-origin'), 'other websites get no CORS access');
   const page = await call('GET', '/api/items?offset=0');

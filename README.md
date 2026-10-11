@@ -4,12 +4,13 @@ A browser-based level editor for LEGO WorldBuilder 2 (the Shockwave game).
 Build a level, press **Play in game**, and it launches in the real game. It
 comes with two 12-mission campaigns: Brickwood Valley and Brickton City.
 
-**Use it online:** <https://jbrotherman.github.io/worldbuilder2-level-editor/>.
-Nothing to install: choose your WorldBuilder 2 folder once, and the editor
-runs entirely in your browser (the game files stay on your computer). To
-play, it gives you a ready-to-play copy of the game to save to a folder or
-download as a zip. Your levels are kept in that browser, so use Share and
-Export for backups.
+**Use it online:** <https://jbrotherman.github.io/worldbuilder2-level-editor/>
+opens the gallery of levels and campaigns players made; the **Editor** tab
+(`editor.html`) is the editor. Nothing to install: show it your WorldBuilder 2
+folder (or its zip) once, and everything runs in your browser (the game files
+stay on your computer). To play, it gives you a ready-to-play copy of the
+game, saved next to your WorldBuilder2 folder or as a zip. Your levels are
+kept in that browser, so use Share and Export for backups.
 
 Or run it on your own PC, as below: that version starts the game for you, in
 a resizable window.
@@ -120,17 +121,18 @@ campaign**, and the level checks use them too.
 
 ## Gallery tab
 
-Browse the levels and campaigns other players shared: search, sort by newest
-or most played, **Play** one, open a level in the editor or import a
-campaign. Share your own with **Share my level** / **Share my campaign** (or
+Browse the levels and campaigns other players shared, as a table you can
+search and sort on any column (name, type, missions, creator, plays, date):
+**Play** one, open a level in the editor or import a campaign. Share your own with **Share my level** / **Share my campaign** (or
 **Share to gallery** in the Level tab's Share dialog and the Campaign tab).
 There are no accounts: you can delete what you shared from the same browser,
 and things several people report are hidden.
 
-The gallery also has its own page,
-<https://jbrotherman.github.io/worldbuilder2-level-editor/gallery.html>,
-which needs no game files to look around; shared links
-(`gallery.html#g=<id>`) open there. **Play** asks once for the folder your
+Online, the gallery is the site's front page,
+<https://jbrotherman.github.io/worldbuilder2-level-editor/>, which needs no
+game files to look around; shared links (`…/#g=<id>`) open there, and the
+editor's Gallery tab leads there. **Add game files** (top right) or **Play**
+asks once for the folder your
 WorldBuilder2 folder is in (WorldBuilder too, if you have it), builds the
 level or campaign from that copy of the game, and saves it right next to it
 as `WorldBuilder2 - <title>`, ready to start. Browsers without a folder

@@ -27,8 +27,9 @@ const loadStored = () => {
   return storedLoaded;
 };
 
-// Asks for the game. Resolves to true once it's in this browser.
-function askForGame(item) {
+// Asks for the game, to play item (or, without an item, from the "Add game
+// files" button). Resolves to true once it's in this browser.
+function askForGame(item = null) {
   return new Promise((resolve) => {
     const d = web.dialog('dlgWebPlay');
     const status = el('p', { class: 'wb2-status', role: 'status' });
@@ -41,7 +42,9 @@ function askForGame(item) {
         const found = await web.importFolder(files);
         if (!found.wb2) throw new Error('No WorldBuilder 2 there (no worldbuilder2.dcr). Choose the folder your WorldBuilder2 folder is in, the WorldBuilder2 folder itself, or the zip it came in.');
         await web.flush();
-        saveNextTo = handle; // with the folder picker: save the build right there
+        // With the folder picker: save builds right there, next to the game.
+        if (item) saveNextTo = handle;
+        else if (handle) await web.saveHandle('play', handle);
         finish(true);
       } catch (e) {
         status.className = 'wb2-status error';
@@ -57,11 +60,13 @@ function askForGame(item) {
       el('p', { class: 'muted wb2-zip-line' }, 'Have the game as a .zip? Drag it here too, or ', zip, zipInput, '.'));
     web.dropTarget(drop, onPick);
     d.replaceChildren(
-      el('h2', {}, `Play “${item.title}”`),
-      el('p', {}, `To play, the gallery puts the ${item.type === 'level' ? 'level' : 'campaign'} into a copy of your own WorldBuilder 2 (the game isn't included here).`),
+      el('h2', {}, item ? `Play “${item.title}”` : 'Add your game files'),
+      el('p', {}, item
+        ? `To play, the gallery puts the ${item.type === 'level' ? 'level' : 'campaign'} into a copy of your own WorldBuilder 2 (the game isn't included here).`
+        : 'Levels and campaigns are played in a copy of your own WorldBuilder 2 (the game isn\'t included here). Show it where yours is once, and Play works straight away from then on, here and in the editor.'),
       el('p', {}, hasFolderPicker
-        ? 'Choose the folder your WorldBuilder2 folder is in (with WorldBuilder too, if you have it). The game is read from there, and the copy is saved next to it, ready to start.'
-        : 'Choose or drag in your WorldBuilder2 folder. You then get a zip to unpack next to it.'),
+        ? `Choose the folder your WorldBuilder2 folder is in (with WorldBuilder too, if you have it). The game is read from there${item ? ', and the copy is saved next to it, ready to start' : ', and what you play is saved next to it'}.`
+        : 'Choose or drag in your WorldBuilder2 folder. Playing then gives you a zip to unpack next to it.'),
       drop,
       status,
       el('p', { class: 'muted' }, 'The game files stay on your computer; they are only read by this page and kept in this browser, so the editor can use them too.'),
@@ -77,6 +82,7 @@ function askForGame(item) {
 async function play(item) {
   await loadStored();
   if (!web.hasGame() && !(await askForGame(item))) return;
+  updateGameButton();
   const d = web.dialog('dlgWebPlay');
   d.replaceChildren(el('h2', {}, `Play “${item.title}”`), el('p', { class: 'wb2-loading-inline' }, 'Building your copy of the game…'));
   if (!d.open) d.showModal();
@@ -95,10 +101,43 @@ async function play(item) {
   }
 }
 
+// The "Add game files" button, top right: says whether the game is there.
+async function updateGameButton() {
+  const b = document.querySelector('#btnGameFiles');
+  if (!b) return;
+  const has = await web.hasStoredGame();
+  b.textContent = has ? 'Game files ✓' : 'Add game files';
+  b.classList.toggle('primary', !has);
+  b.classList.toggle('has-game', has);
+}
+
+async function gameFilesButton() {
+  await loadStored();
+  if (web.hasGame()) return web.showGameFiles();
+  if (await askForGame()) {
+    web.dialog('dlgWebPlay').close();
+    updateGameButton();
+    const t = document.querySelector('#toast');
+    if (t) {
+      t.textContent = 'Game files added. Press ▶ Play on anything in the gallery.';
+      t.className = 'toast';
+      t.hidden = false;
+      setTimeout(() => { t.hidden = true; }, 6000);
+    }
+  }
+}
+
 async function start() {
   // editor/gallery.js picks this up.
   window.WB2_GALLERY_HOST = { play, gameHelp: web.gameHelp };
   window.WB2_WEB = { api, play, importFolder: web.importFolder };
+  const begin = () => {
+    const b = document.querySelector('#btnGameFiles');
+    if (b) b.addEventListener('click', gameFilesButton);
+    updateGameButton();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', begin, { once: true });
+  else begin();
 }
 
 module.exports = { start };

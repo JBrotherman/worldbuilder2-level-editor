@@ -10,7 +10,7 @@ const paths = require('../tools/paths');
 const { createApi } = require('../tools/api');
 const web = require('./shared');
 
-const { ROOT, GAME2_DIR, GAME1_DIR, $, el, nextFrame, hasFolderPicker } = web;
+const { ROOT, GAME2_DIR, $, el, nextFrame, hasFolderPicker } = web;
 const SEEDED_FLAG = path.join(ROOT, '.seeded');
 
 // ------------------------------------------------------------ the API
@@ -105,7 +105,7 @@ function showSetup(error) {
   overlay().replaceChildren(el('div', { class: 'wb2-card' },
     el('h1', { id: 'wb2SetupTitle' }, el('span', { class: 'brick' }), 'WorldBuilder 2 Level Editor'),
     el('p', { class: 'wb2-lead' }, 'Make your own missions and campaigns for LEGO WorldBuilder 2, and play them in the real game.'),
-    el('p', { class: 'wb2-gallery-link' }, 'Just looking? ', el('a', { href: 'gallery.html' }, 'Browse the gallery'), ' of levels and campaigns other players made; no game files needed to look around.'),
+    el('p', { class: 'wb2-gallery-link' }, 'Just looking? ', el('a', { href: './' }, 'Browse the gallery'), ' of levels and campaigns other players made; no game files needed to look around.'),
     el('h2', {}, 'Your copy of the game'),
     el('p', {}, 'The editor uses your own copy of WorldBuilder 2 for its pictures, missions and rules. Show it where the game is: the folder with ',
       el('code', {}, 'Launcher.exe'), ' and ', el('code', {}, 'worldbuilder2.dcr'), ' in it, or the folder above it.'),
@@ -142,52 +142,20 @@ async function startGame() {
   showSetup(loadError || 'That folder could not be read as WorldBuilder 2.');
 }
 
-// ------------------------------------------------------------ game files menu
-
-function showGameFiles() {
-  const d = web.dialog('dlgWebPlay');
-  const status = el('p', { class: 'wb2-status', role: 'status' });
-  const reloadAfter = (fn) => async (files) => {
-    status.className = 'wb2-status';
-    status.textContent = 'Reading…';
-    try {
-      await fn(files);
-      await web.flush();
-      location.reload();
-    } catch (e) {
-      status.className = 'wb2-status error';
-      status.textContent = e.message;
-    }
-  };
-  const [pick2, in2] = web.folderPicker('Choose WorldBuilder 2 again', reloadAfter(async (files) => {
-    if (!(await web.importFolder(files)).wb2) throw new Error('No worldbuilder2.dcr in that folder.');
-  }), { primary: false });
-  const [pick1, in1] = web.folderPicker(web.hasWb1() ? 'Choose WorldBuilder again' : 'Add the original WorldBuilder', reloadAfter(async (files) => {
-    if (!(await web.importFolder(files, { wb1Only: true })).wb1) throw new Error('No worldbuilder.dcr in that folder.');
-  }), { primary: false });
-  const forget = el('button', { type: 'button', onclick: async () => {
-    if (!confirm('Remove the game files from this browser? Your levels and campaign stay.')) return;
-    for (const dir of [GAME2_DIR, GAME1_DIR]) if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true });
-    await web.flush();
-    location.reload();
-  } }, 'Remove game files');
-  d.replaceChildren(
-    el('h2', {}, 'Game files'),
-    el('p', {}, 'WorldBuilder 2: ✓ loaded. Original WorldBuilder: ', web.hasWb1() ? '✓ loaded.' : 'not added (optional).'),
-    el('p', { class: 'muted' }, 'They are kept in this browser only. Your levels, campaign and unit settings are kept here too: use Share and Export for backups.'),
-    el('div', { class: 'wb2-actions' }, pick2, in2, pick1, in1, forget),
-    status,
-    el('menu', {}, el('button', { type: 'button', onclick: () => d.close() }, 'Close')));
-  d.showModal();
-}
-
 function adaptEditorPage() {
   // Texts that describe the local version's folders.
   for (const p of document.querySelectorAll('dialog p.muted')) {
     if (/levels.*folder/i.test(p.textContent)) p.textContent = 'Saved in this browser. Use Share to send it to someone or to keep a copy.';
   }
   const topbar = $('.topbar');
-  if (topbar) topbar.append(el('button', { type: 'button', class: 'wb2-gamefiles', title: 'Your WorldBuilder game files', onclick: showGameFiles }, 'Game files'));
+  if (topbar) topbar.append(el('button', { type: 'button', class: 'wb2-gamefiles', title: 'Your WorldBuilder game files', onclick: () => web.showGameFiles() }, 'Game files'));
+  // Online, the gallery is its own page (the site's front page): the
+  // Gallery tab goes there, first in line.
+  const galleryTab = $('.tabs [data-tab=gallery]');
+  if (galleryTab) {
+    galleryTab.parentNode.prepend(el('a', { href: './', class: 'tab-link', title: 'Levels and campaigns other players made' }, 'Gallery'));
+    galleryTab.remove();
+  }
 }
 
 // ------------------------------------------------------------ start

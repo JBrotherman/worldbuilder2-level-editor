@@ -98,17 +98,22 @@ function build(OUT = DEFAULT_OUT) {
     fs.copyFileSync(path.join(ROOT, 'editor', name), path.join(OUT, name));
   }
   fs.copyFileSync(path.join(ROOT, 'web', 'web.css'), path.join(OUT, 'web.css'));
-  const indexFile = path.join(OUT, 'index.html');
-  let html = fs.readFileSync(indexFile, 'utf8');
+  // The gallery is the front page (index.html); the editor is editor.html.
+  fs.renameSync(path.join(OUT, 'index.html'), path.join(OUT, 'editor.html'));
+  const editorFile = path.join(OUT, 'editor.html');
+  let html = fs.readFileSync(editorFile, 'utf8');
   const marker = '<script src="level.js"></script>';
-  if (!html.includes(marker)) throw new Error('index.html: level.js script tag not found');
+  if (!html.includes(marker)) throw new Error('editor/index.html: level.js script tag not found');
   html = html
     .replace('<link rel="stylesheet" href="style.css">', '<link rel="stylesheet" href="style.css">\n  <link rel="stylesheet" href="web.css">')
     .replace(marker, `<script src="wb2-web.js"></script>\n  ${marker}`);
-  fs.writeFileSync(indexFile, html);
+  fs.writeFileSync(editorFile, html);
   fs.writeFileSync(path.join(OUT, 'wb2-web.js'), bundle('web/main.js', seedFiles()));
-  fs.copyFileSync(path.join(ROOT, 'web', 'gallery.html'), path.join(OUT, 'gallery.html'));
+  fs.copyFileSync(path.join(ROOT, 'web', 'gallery.html'), path.join(OUT, 'index.html'));
   fs.writeFileSync(path.join(OUT, 'gallery-web.js'), bundle('web/gallery-page.js', null));
+  // Links shared before the gallery became the front page.
+  fs.writeFileSync(path.join(OUT, 'gallery.html'), '<!doctype html><meta charset="utf-8"><title>WorldBuilder 2 Gallery</title>'
+    + '<script>location.replace("./" + location.hash)</script><a href="./">WorldBuilder 2 Gallery</a>\n');
   fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
   return OUT;
 }

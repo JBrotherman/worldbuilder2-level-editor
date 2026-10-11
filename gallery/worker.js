@@ -4,7 +4,7 @@
 // (kept by the uploader's browser), uploads are rate limited per IP (stored
 // only as a salted hash), and items with several reports are hidden.
 //
-//   GET    /api/items?type=level|campaign&sort=new|popular&q=…&offset=0
+//   GET    /api/items?type=level|campaign&sort=created|downloads|title|author|type|missions&dir=asc|desc&q=…&offset=0
 //   GET    /api/items/:id          (counts as a download, unless ?peek)
 //   POST   /api/items              { type, title, author, description, data }
 //   DELETE /api/items/:id          X-Delete-Key, or Authorization: Bearer ADMIN_TOKEN
@@ -88,9 +88,25 @@ const publicItem = (row, withData) => ({
   ...(withData ? { data: row.data } : {}),
 });
 
+// Columns the list can be sorted on (sort=…&dir=asc|desc). Levels count as
+// one mission. "new" and "popular" are older names for created/downloads.
+const SORTS = {
+  created: 'created',
+  downloads: 'downloads',
+  title: 'title COLLATE NOCASE',
+  author: 'author COLLATE NOCASE',
+  type: 'type',
+  missions: "COALESCE(json_extract(info, '$.missions'), 1)",
+};
+
 async function list(env, url) {
   const type = url.searchParams.get('type');
-  const sort = url.searchParams.get('sort') === 'popular' ? 'downloads DESC, created DESC' : 'created DESC';
+  let key = url.searchParams.get('sort');
+  key = key === 'new' ? 'created' : key === 'popular' ? 'downloads' : key;
+  if (!SORTS[key]) key = 'created';
+  const dirParam = url.searchParams.get('dir');
+  const dir = dirParam === 'asc' || dirParam === 'desc' ? dirParam : ['title', 'author', 'type'].includes(key) ? 'asc' : 'desc';
+  const sort = `${SORTS[key]} ${dir.toUpperCase()}, created DESC`;
   const q = cleanText(url.searchParams.get('q'), 60);
   const offset = Math.max(0, Math.min(10000, Number(url.searchParams.get('offset')) || 0));
   const where = ['reports < ?'];

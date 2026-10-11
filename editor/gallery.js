@@ -21,7 +21,7 @@
 
   let api, el;
   let onPage = false; // gallery.html, rather than the editor's tab
-  const query = { type: '', sort: 'new', q: '' };
+  const query = { type: '', sort: 'created', dir: 'desc', q: '' };
   let items = [];
   let more = false;
   let busy = false;
@@ -33,7 +33,8 @@
   };
   // A different server can be set for testing: localStorage['wb2-gallery-server'].
   const server = () => String(store.get('wb2-gallery-server', DEFAULT_SERVER)).replace(/\/$/, '');
-  const itemLink = (id) => `${SITE}gallery.html#g=${id}`;
+  // The gallery is the site's front page.
+  const itemLink = (id) => `${SITE}#g=${id}`;
 
   async function call(path, opts = {}) {
     let res;
@@ -54,8 +55,6 @@
     el = api.el;
     api.shareToGallery = share;
     document.querySelector('#galleryActions').append(
-      // The gallery page is part of the online version only.
-      window.WB2_WEB ? el('a', { class: 'button', href: 'gallery.html', target: '_blank', title: 'The gallery on its own page, for people who don\'t have the editor set up' }, 'Gallery page') : '',
       el('button', { title: 'Share the level you have open in the Level tab', onclick: () => share('level') }, 'Share my level'),
       el('button', { title: 'Share your campaign (from the Campaign tab)', onclick: () => share('campaign') }, 'Share my campaign'),
     );
@@ -114,7 +113,7 @@
     const status = document.querySelector('#galleryStatus');
     if (status) status.textContent = 'Loading…';
     try {
-      const params = new URLSearchParams({ sort: query.sort, offset: append ? items.length : 0 });
+      const params = new URLSearchParams({ sort: query.sort, dir: query.dir, offset: append ? items.length : 0 });
       if (query.type) params.set('type', query.type);
       if (query.q) params.set('q', query.q);
       const [res, linked] = await Promise.all([
@@ -146,31 +145,64 @@
     };
     const head = el('div', { class: 'gallery-head' },
       search,
-      select(query.type, [['', 'Levels and campaigns'], ['level', 'Levels'], ['campaign', 'Campaigns']], (v) => { query.type = v; refresh(); }, 'Show'),
-      select(query.sort, [['new', 'Newest first'], ['popular', 'Most played']], (v) => { query.sort = v; refresh(); }, 'Order'));
+      select(query.type, [['', 'Levels and campaigns'], ['level', 'Levels'], ['campaign', 'Campaigns']], (v) => { query.type = v; refresh(); }, 'Show'));
     const list = featured ? items.filter((i) => i.id !== featured.id) : items;
-    const grid = el('div', { class: 'gallery-grid' }, list.map(card));
     let note = null;
     if (error) note = el('p', { class: 'gallery-note error' }, error, ' ', el('button', { class: 'small', onclick: () => refresh() }, 'Try again'));
     else if (!items.length) note = el('p', { class: 'gallery-note' }, query.q || query.type ? 'Nothing found.' : 'Nothing shared yet.');
     const intro = onPage
       ? el('div', { class: 'page-intro' },
         el('h1', {}, 'WorldBuilder 2 Gallery'),
-        el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Press Play to play one in your own copy of LEGO WorldBuilder 2, or open it in the editor to change it. To share your own, use Share in the ',
-          el('a', { href: 'index.html' }, 'editor'), '.'),
+        el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Press Play to play one in your own copy of LEGO WorldBuilder 2, or open it in the ',
+          el('a', { href: 'editor.html' }, 'editor'), ' to change it or make your own.'),
         guide())
       : el('div', { class: 'page-intro' },
         el('h1', {}, 'Gallery'),
         el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Play one, or open it here to play with it; share your own with the buttons above or from Share in the Level tab.'));
-    view.replaceChildren(
+    const parts = [
       intro,
-      featured ? el('div', { class: 'gallery-featured' }, el('h2', {}, 'Shared with you'), el('div', { class: 'gallery-grid' }, card(featured))) : null,
+      featured ? el('section', { class: 'gallery-featured' }, el('h2', {}, 'Shared with you'), table([featured], { sortable: false })) : null,
       head,
       el('p', { id: 'galleryStatus', class: 'muted', role: 'status' }),
       note,
-      grid,
-      more ? el('div', { class: 'gallery-more' }, el('button', { onclick: () => refresh(true) }, 'Show more')) : null);
+      list.length ? table(list, { sortable: true }) : null,
+      more ? el('div', { class: 'gallery-more' }, el('button', { onclick: () => refresh(true) }, 'Show more')) : null,
+    ];
+    view.replaceChildren(...parts.filter(Boolean));
     for (const canvas of view.querySelectorAll('canvas.gallery-thumb')) drawThumb(canvas);
+  }
+
+  // Table columns; those with a key can be sorted on (by the server).
+  const COLUMNS = [
+    { cls: 'col-thumb', label: 'Preview', hidden: true },
+    { cls: 'col-name', label: 'Name', key: 'title' },
+    { cls: 'col-type', label: 'Type', key: 'type' },
+    { cls: 'col-num', label: 'Missions', key: 'missions' },
+    { cls: 'col-author', label: 'Creator', key: 'author' },
+    { cls: 'col-num', label: 'Plays', key: 'downloads' },
+    { cls: 'col-date', label: 'Added', key: 'created' },
+    { cls: 'col-actions', label: 'Actions', hidden: true },
+  ];
+  const defaultDir = (key) => (['title', 'author', 'type'].includes(key) ? 'asc' : 'desc');
+
+  function table(list, { sortable }) {
+    const th = (c) => {
+      if (c.hidden) return el('th', { class: c.cls, scope: 'col' }, el('span', { class: 'sr-only' }, c.label));
+      if (!sortable) return el('th', { class: c.cls, scope: 'col' }, c.label);
+      const active = query.sort === c.key;
+      const sortBy = () => {
+        if (active) query.dir = query.dir === 'asc' ? 'desc' : 'asc';
+        else { query.sort = c.key; query.dir = defaultDir(c.key); }
+        refresh();
+      };
+      return el('th', { class: c.cls, scope: 'col', 'aria-sort': active ? (query.dir === 'asc' ? 'ascending' : 'descending') : 'none' },
+        el('button', { class: 'sort' + (active ? ' active' : ''), title: `Sort by ${c.label.toLowerCase()}`, onclick: sortBy },
+          c.label, el('span', { class: 'arrow', 'aria-hidden': 'true' }, active ? (query.dir === 'asc' ? '▲' : '▼') : '↕')));
+    };
+    return el('div', { class: 'gallery-table-wrap' },
+      el('table', { class: 'gallery-table' },
+        el('thead', {}, el('tr', {}, COLUMNS.map(th))),
+        el('tbody', {}, list.map(row))));
   }
 
   // gallery.html: how playing works, for people new to it. Can be hidden.
@@ -198,30 +230,45 @@
     return new Date(ms).toLocaleDateString();
   }
 
-  function card(item) {
-    const keys = store.get(KEYS, {});
-    const mine = !!keys[item.id];
-    const size = item.type === 'level'
-      ? `${item.info.width}×${item.info.height}`
-      : `${item.info.missions} mission${item.info.missions === 1 ? '' : 's'}${item.info.tunedUnits ? ', own unit settings' : ''}`;
-    const thumb = item.type === 'level'
+  function row(item) {
+    const mine = !!store.get(KEYS, {})[item.id];
+    const isLevel = item.type === 'level';
+    const thumb = isLevel
       ? el('canvas', { class: 'gallery-thumb', 'aria-hidden': 'true' })
-      : el('div', { class: 'gallery-thumb campaign', 'aria-hidden': 'true' }, el('span', {}, String(item.info.missions)), 'missions');
-    if (item.type === 'level') thumb.item = item;
-    return el('article', { class: 'gallery-card' },
-      thumb,
-      el('div', { class: 'gallery-body' },
-        el('h3', {}, item.title, mine ? el('span', { class: 'gallery-badge' }, 'yours') : null),
-        el('div', { class: 'gallery-meta' }, `${item.type === 'level' ? 'Level' : 'Campaign'} by ${item.author} · ${size} · ${ago(item.created)} · ${item.downloads} play${item.downloads === 1 ? '' : 's'}`),
-        item.description ? el('p', { class: 'gallery-desc' }, item.description) : null,
-        el('div', { class: 'gallery-actions' },
-          el('button', { class: 'primary small', title: 'Play it in your own copy of WorldBuilder 2', onclick: () => playItem(item) }, '▶ Play'),
-          el('button', { class: 'small', title: item.type === 'level' ? 'Open it in the editor to look at it or change it' : 'Use it as your campaign in the editor', onclick: () => openItem(item) }, item.type === 'level' ? 'Open in editor' : 'Import into editor'),
-          el('button', { class: 'small', title: 'Copy a link to this, to send to someone', onclick: () => copyLink(item) }, 'Copy link'),
-          mine
-            ? el('button', { class: 'small', onclick: () => remove(item) }, 'Delete')
-            : el('button', { class: 'small subtle', title: 'Report spam or something inappropriate', onclick: () => report(item) }, 'Report'))));
+      : el('div', { class: 'gallery-thumb campaign', 'aria-hidden': 'true' }, String(item.info.missions || ''));
+    if (isLevel) thumb.item = item;
+    // "⋯" menu with the less common actions.
+    const menu = el('details', { class: 'row-menu' });
+    const menuItem = (label, title, fn) => el('button', { type: 'button', title, onclick: () => { menu.open = false; fn(); } }, label);
+    menu.append(
+      el('summary', { title: 'More', 'aria-label': `More for ${item.title}` }, '⋯'),
+      el('div', { class: 'row-menu-items' },
+        menuItem(isLevel ? 'Open in editor' : 'Import into editor', isLevel ? 'Open it in the editor to look at it or change it' : 'Use it as your campaign in the editor', () => openItem(item)),
+        menuItem('Copy link', 'Copy a link to this, to send to someone', () => copyLink(item)),
+        mine ? menuItem('Delete from gallery', 'Remove what you shared', () => remove(item))
+          : menuItem('Report', 'Report spam or something inappropriate', () => report(item))));
+    const type = isLevel
+      ? `Level · ${item.info.width}×${item.info.height}`
+      : `Campaign${item.info.tunedUnits ? ' · own units' : ''}`;
+    return el('tr', {},
+      el('td', { class: 'col-thumb' }, thumb),
+      el('td', { class: 'col-name' },
+        el('div', { class: 'gallery-name' }, item.title, mine ? el('span', { class: 'gallery-badge' }, 'yours') : null),
+        item.description ? el('div', { class: 'gallery-desc', title: item.description }, item.description) : null),
+      el('td', { class: 'col-type' }, type),
+      el('td', { class: 'col-num', 'data-label': 'Missions' }, String(isLevel ? 1 : item.info.missions || 0)),
+      el('td', { class: 'col-author', 'data-label': 'By' }, item.author),
+      el('td', { class: 'col-num', 'data-label': 'Plays' }, String(item.downloads || 0)),
+      el('td', { class: 'col-date', title: new Date(item.created).toLocaleString() }, ago(item.created)),
+      el('td', { class: 'col-actions' },
+        el('button', { class: 'primary small', title: 'Play it in your own copy of WorldBuilder 2', onclick: () => playItem(item) }, '▶ Play'),
+        menu));
   }
+
+  // Close "⋯" menus when clicking elsewhere.
+  document.addEventListener('click', (e) => {
+    for (const m of document.querySelectorAll('.row-menu[open]')) if (!m.contains(e.target)) m.open = false;
+  });
 
   // A little map of a level.
   function drawThumb(canvas) {
@@ -281,7 +328,7 @@
   async function openItem(summary) {
     if (onPage) {
       // The editor opens it (after setting up the game files, if needed).
-      location.href = `index.html#g=${summary.id}`;
+      location.href = `editor.html#g=${summary.id}`;
       return;
     }
     const item = await fetchItem(summary.id);
@@ -293,7 +340,7 @@
     }
   }
 
-  // In the editor, links like …/index.html#g=abcd2345 open that item.
+  // In the editor, links like …/editor.html#g=abcd2345 open that item.
   async function openLinkedItem() {
     const m = /^#g=([a-z0-9]{8})$/.exec(location.hash);
     if (!m) return;

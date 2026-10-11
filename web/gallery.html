@@ -4,16 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>WorldBuilder 2 Gallery</title>
-  <meta name="description" content="Levels and campaigns for LEGO WorldBuilder 2, made by players. Play them in your own copy of the game.">
+  <meta name="description" content="Levels and campaigns for LEGO WorldBuilder 2, made by players. Play them in your own copy of the game, or make your own with the editor.">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="web.css">
 </head>
 <body class="gallery-page">
   <header class="topbar">
-    <div class="brand"><span class="brick"></span>WorldBuilder 2 Gallery</div>
+    <div class="brand"><span class="brick"></span>WorldBuilder 2</div>
+    <nav class="tabs site-tabs" aria-label="Pages">
+      <a href="./" aria-current="page" class="tab-link active">Gallery</a>
+      <a href="editor.html" class="tab-link">Editor</a>
+    </nav>
     <div class="doc"></div>
     <nav class="actions">
-      <a class="button primary" href="index.html">Open the editor</a>
+      <button type="button" id="btnGameFiles" title="Show the gallery and the editor where your WorldBuilder 2 is">Add game files</button>
     </nav>
   </header>
 
