@@ -375,12 +375,36 @@ async function writeToFolder(parent, folder, outDir, { applyDeletes }) {
   }
 }
 
+// The resizable game window (tools/window/WB2Window.cs), published with the
+// site; every game copy gets it as PLAY_EXE. null if it can't be fetched.
+const PLAY_EXE = 'Play WorldBuilder 2.exe';
+let windowExe;
+function resizableWindowExe() {
+  if (windowExe === undefined) {
+    windowExe = fetch('WB2Window.exe')
+      .then((r) => (r.ok ? r.arrayBuffer() : null))
+      .then((b) => (b && b.byteLength ? Buffer.from(b) : null))
+      .catch(() => null);
+  }
+  return windowExe;
+}
+
+// What to double-click, once it's saved.
+function startLine(prefix, withWindow) {
+  return withWindow
+    ? el('p', {}, prefix, el('strong', {}, PLAY_EXE), ' to start the game in a window you can resize (F11: full screen). ',
+      el('span', { class: 'muted' }, '(Launcher.exe starts it in the original small window.)'))
+    : el('p', {}, prefix, el('strong', {}, 'Launcher.exe'), ' to start the game.');
+}
+
 // After a build: save it to a folder (remembered for next time) or a zip.
 // kind: 'level', 'campaign', 'shared-level' or 'shared-campaign'.
 // saveTo: a folder handle to save to straight away.
 async function showPlayDialog(outDir, kind, { title = '', saveTo = null } = {}) {
   // Picked folders never include empty ones; the game keeps its progress in Prefs.
   fs.mkdirSync(path.join(outDir, 'Prefs'));
+  const exe = await resizableWindowExe();
+  if (exe) fs.writeFileSync(path.join(outDir, PLAY_EXE), exe);
   const shared = kind.startsWith('shared-');
   const isLevel = kind === 'level' || kind === 'shared-level';
   const folder = buildFolder(shared ? 'shared' : kind, title);
@@ -399,7 +423,8 @@ async function showPlayDialog(outDir, kind, { title = '', saveTo = null } = {}) 
       await writeToFolder(parent, folder, outDir, { applyDeletes: kind === 'campaign' });
       await saveHandle('play', parent);
       body.replaceChildren(
-        el('p', {}, `Saved “${folder}” in “${parent.name}”. Open it and double-click `, el('strong', {}, 'Launcher.exe'), ' to start the game.'),
+        startLine(`Saved “${folder}” in “${parent.name}”. Open it and double-click `, !!exe),
+        el('p', { class: 'muted' }, 'If Windows says it protected your PC, click More info, then Run anyway.'),
         el('p', { class: 'muted' }, startHint));
     } catch (e) {
       status.className = 'wb2-status error';
@@ -435,8 +460,10 @@ async function showPlayDialog(outDir, kind, { title = '', saveTo = null } = {}) 
     download(`${folder}.zip`, writeZip(entries), 'application/zip');
     busy(false);
     body.replaceChildren(
-      el('p', {}, `Unzip “${folder}.zip” into the folder your WorldBuilder2 folder is in (right-click it, Extract All), open “${folder}” and double-click `, el('strong', {}, 'Launcher.exe'), '.'),
-      el('p', { class: 'muted' }, 'If Windows says it protected your PC, click More info, then Run anyway: it\'s the game\'s own Launcher.exe with the missions inside.'),
+      startLine(`Unzip “${folder}.zip” into the folder your WorldBuilder2 folder is in (right-click it, Extract All), open “${folder}” and double-click `, !!exe),
+      el('p', { class: 'muted' }, exe
+        ? `If Windows says it protected your PC, click More info, then Run anyway: Launcher.exe is the game's own, with the missions inside, and ${PLAY_EXE} is this editor's window for it.`
+        : 'If Windows says it protected your PC, click More info, then Run anyway: it\'s the game\'s own Launcher.exe with the missions inside.'),
       el('p', { class: 'muted' }, startHint));
   };
 

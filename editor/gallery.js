@@ -216,7 +216,7 @@
       el('ol', {},
         el('li', {}, el('strong', {}, 'Have LEGO WorldBuilder 2'), ' on your Windows PC: a folder called WorldBuilder2, or the zip it came in. Nothing to install.'),
         el('li', {}, el('strong', {}, 'Press ▶ Play'), ' on a level or campaign and show it where your game is. The first time only.'),
-        el('li', {}, el('strong', {}, 'Open the new “WorldBuilder2 - …” folder'), ' next to your game and double-click Launcher.exe.')),
+        el('li', {}, el('strong', {}, 'Open the new “WorldBuilder2 - …” folder'), ' next to your game and double-click Play WorldBuilder 2.exe.')),
       window.WB2_GALLERY_HOST.gameHelp());
   }
 

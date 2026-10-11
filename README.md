@@ -9,11 +9,12 @@ opens the gallery of levels and campaigns players made; the **Editor** tab
 (`editor.html`) is the editor. Nothing to install: show it your WorldBuilder 2
 folder (or its zip) once, and everything runs in your browser (the game files
 stay on your computer). To play, it gives you a ready-to-play copy of the
-game, saved next to your WorldBuilder2 folder or as a zip. Your levels are
-kept in that browser, so use Share for backups.
+game, saved next to your WorldBuilder2 folder or as a zip; start it with
+**Play WorldBuilder 2.exe**, a window you can resize (F11: full screen). Your
+levels are kept in that browser, so use Share for backups.
 
 Or run it on your own PC, as below: that version starts the game for you, in
-a resizable window.
+the same resizable window.
 
 ## Getting started
 

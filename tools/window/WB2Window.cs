@@ -10,6 +10,8 @@
 //
 // Build: csc /target:winexe /out:WB2Window.exe WB2Window.cs
 // Usage: WB2Window.exe "path\to\Launcher.exe"
+// Without a path it starts the Launcher.exe next to it: the browser version
+// puts it in each game copy it saves, as "Play WorldBuilder 2.exe".
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -24,12 +26,15 @@ static class Program
     static int Main(string[] args)
     {
         Application.EnableVisualStyles();
-        if (args.Length < 1 || !File.Exists(args[0]))
+        string exe = args.Length > 0 ? args[0] : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Launcher.exe");
+        if (!File.Exists(exe))
         {
-            MessageBox.Show("Usage: WB2Window.exe \"path\\to\\Launcher.exe\"", "WorldBuilder 2");
+            MessageBox.Show(args.Length > 0
+                ? "Usage: WB2Window.exe \"path\\to\\Launcher.exe\""
+                : "Launcher.exe is not here. Keep this program in the same folder as the game's Launcher.exe.", "WorldBuilder 2");
             return 1;
         }
-        string exe = Path.GetFullPath(args[0]);
+        exe = Path.GetFullPath(exe);
         var psi = new ProcessStartInfo(exe);
         psi.WorkingDirectory = Path.GetDirectoryName(exe);
         Process proc = Process.Start(psi);

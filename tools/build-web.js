@@ -116,6 +116,14 @@ function build(OUT = DEFAULT_OUT) {
   // Links shared before the gallery became the front page.
   fs.writeFileSync(path.join(OUT, 'gallery.html'), '<!doctype html><meta charset="utf-8"><title>WorldBuilder 2 Gallery</title>'
     + '<script>location.replace("./" + location.hash)</script><a href="./">WorldBuilder 2 Gallery</a>\n');
+  // The resizable game window (tools/window/WB2Window.cs), which the browser
+  // version puts in every game copy it saves. Our own code, not the game's.
+  // WB2WINDOW_EXE: one built elsewhere (the publish workflow builds it on
+  // Windows); otherwise it's built here, which needs Windows.
+  const windowExe = process.env.WB2WINDOW_EXE || require('./window').ensureWrapper();
+  if (windowExe && fs.existsSync(windowExe)) fs.copyFileSync(windowExe, path.join(OUT, 'WB2Window.exe'));
+  else if (process.env.GITHUB_ACTIONS) throw new Error('WB2Window.exe is missing (set WB2WINDOW_EXE)');
+  else console.warn('Note: WB2Window.exe could not be built (needs Windows); game copies get only Launcher.exe.');
   fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
   // Browsers keep files for a while (GitHub Pages: 10 minutes); a fingerprint
   // of each script and stylesheet in its URL makes them fetch new versions

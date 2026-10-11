@@ -17,14 +17,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The resizable game window (tools/window/WB2Window.cs), built with the C#
+  # compiler that comes with Windows.
+  window:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node -e "if (!require('./tools/window').ensureWrapper()) process.exit(1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wb2window
+          path: build/WB2Window.exe
+
   build:
+    needs: window
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: wb2window
+          path: window-build
       - run: node tools/build-web.js
+        env:
+          WB2WINDOW_EXE: window-build/WB2Window.exe
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
