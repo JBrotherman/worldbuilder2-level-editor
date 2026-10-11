@@ -27,6 +27,7 @@
   const terrainChars = catalog.terrain.map((t) => t.char);
   const WATER_TERRAIN = new Set(['w', 'x', 'r', 'whirlpool']);
   const DRAFT_KEY = 'wb2-editor-draft';
+  const START_LEVEL = 'Brickwood 12 The Last Expedition';
 
   const view = new MapView($('#map'), catalog);
   const state = {
@@ -964,8 +965,18 @@
   if (draft && draft.text) {
     loadLevel(Level.parse(draft.text), draft.file || null, { dirty: !!draft.dirty });
   } else {
-    const lv = Level.create(16, 12);
-    lv.name = 'CUSTOM LEVEL';
+    // The first time: an unsaved copy of the Brickwood finale (the level in
+    // the picture behind the browser version's game files window), or an
+    // empty field if that level is gone.
+    let lv = null;
+    try {
+      const res = await fetch(`/api/custom?file=${encodeURIComponent(START_LEVEL)}`);
+      if (res.ok) lv = Level.parse(await res.text());
+    } catch (e) { /* use an empty field */ }
+    if (!lv || !lv.width || !lv.height) {
+      lv = Level.create(16, 12);
+      lv.name = 'CUSTOM LEVEL';
+    }
     loadLevel(lv, null);
   }
 
