@@ -289,6 +289,20 @@
       if (!whirlpools.has(partner)) add('warning', `Whirlpool ${n} has no partner (whirlpools probably link in pairs: ${Math.min(n, partner)}↔${Math.max(n, partner)})`, cells);
     }
 
+    // A billboard's picture is 2 tiles wide: it stands over a hole on its left.
+    const charOf = (name) => (cat.terrain.find((t) => t.name === name) || {}).char;
+    const billboard = charOf('billboard'), hole = charOf('hole');
+    const loneBillboards = [];
+    for (let y = 0; y < level.height; y++) {
+      for (let x = 0; x < level.width; x++) {
+        if (!billboard || level.items[y][x] || level.terrain[y][x] !== billboard) continue;
+        if (x === 0 || level.items[y][x - 1] || level.terrain[y][x - 1] !== hole) loneBillboards.push({ x, y });
+      }
+    }
+    if (loneBillboards.length) {
+      add('warning', 'A billboard needs a Hole on its left: its picture is 2 tiles wide and covers that tile. Paint the billboard again to add the hole.', loneBillboards);
+    }
+
     if (level.center && (level.center.x >= level.width || level.center.y >= level.height)) {
       add('warning', 'Start view centre is outside the map');
     }

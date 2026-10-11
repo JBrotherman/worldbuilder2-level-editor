@@ -97,7 +97,8 @@
     sections.push({
       title: 'Terrain',
       entries: catalog.terrain.map((t) => ({
-        label: terrainLabel(t.name), title: `${terrainLabel(t.name)}  (map character "${t.char}")`,
+        label: terrainLabel(t.name),
+        title: `${terrainLabel(t.name)}  (map character "${t.char}")${t.name === 'billboard' ? '\n2 tiles wide: also makes the tile on its left a hole, which it stands over' : ''}`,
         sprite: view.first(`terrain.${t.name}`), brush: { type: 'terrain', char: t.char },
         color: catalog.preview ? MapView.terrainColor(t.name) : null,
       })),
@@ -342,8 +343,35 @@
     afterEdit(true);
   }
 
+  // A billboard is two tiles wide: its picture stands over a Hole on its
+  // left (the game's map key: "should be to right of a hole").
+  const charOf = (name) => (catalog.terrain.find((t) => t.name === name) || {}).char;
+  const terrainAt = (x, y) => (x >= 0 && x < state.level.width ? view.terrainName(state.level.terrain[y][x]) : null);
+  const isBillboardHole = (x, y) => terrainAt(x, y) === 'hole' && terrainAt(x + 1, y) === 'billboard' && !state.level.items[y][x + 1];
+  // Before (x, y) is painted over: remove the billboard it is half of, if
+  // any, so no half billboards are left behind.
+  function clearBillboard(x, y) {
+    const lv = state.level;
+    if (terrainAt(x, y) === 'billboard' && !lv.items[y][x] && terrainAt(x - 1, y) === 'hole') lv.terrain[y][x - 1] = charOf('normal');
+    if (isBillboardHole(x, y)) lv.terrain[y][x + 1] = charOf('normal');
+  }
+  // Returns false (and says why) if it can't go there.
+  function placeBillboard(x, y) {
+    const lv = state.level;
+    if (x === 0) { toast('A billboard is 2 tiles wide: it needs a tile on its left, for the hole it stands over.', true); return false; }
+    if (terrainAt(x, y) === 'billboard' && isBillboardHole(x - 1, y)) return true;
+    clearBillboard(x, y);
+    clearBillboard(x - 1, y);
+    lv.items[y][x - 1] = null;
+    lv.terrain[y][x - 1] = charOf('hole');
+    lv.items[y][x] = null;
+    lv.terrain[y][x] = state.brush.char;
+    return true;
+  }
+
   function placeItem(x, y, template) {
     const lv = state.level;
+    clearBillboard(x, y);
     const item = JSON.parse(JSON.stringify(template));
     const onWater = WATER_TERRAIN.has(lv.terrain[y][x]);
     if (item.kind !== 'whirlpool' && item.kind !== 'raw') item.water = onWater;
@@ -355,12 +383,16 @@
   function applyTool(cell) {
     const lv = state.level;
     const { x, y } = cell;
-    const before = JSON.stringify([lv.terrain[y][x], lv.items[y][x], lv.center]);
+    // The whole row: a billboard changes its neighbour too.
+    const before = JSON.stringify([lv.terrain[y], lv.items[y], lv.center]);
     switch (state.tool) {
       case 'select':
         return false; // selecting happens on mousedown; never edits
       case 'paint':
-        if (state.brush.type === 'terrain') {
+        if (state.brush.type === 'terrain' && view.terrainName(state.brush.char) === 'billboard') {
+          if (!placeBillboard(x, y)) return false;
+        } else if (state.brush.type === 'terrain') {
+          clearBillboard(x, y);
           lv.items[y][x] = null;
           lv.terrain[y][x] = state.brush.char;
         } else {
@@ -380,7 +412,7 @@
         lv.center = { x, y };
         break;
     }
-    return before !== JSON.stringify([lv.terrain[y][x], lv.items[y][x], lv.center]);
+    return before !== JSON.stringify([lv.terrain[y], lv.items[y], lv.center]);
   }
 
   // ---------------------------------------------------------------- map input
@@ -488,6 +520,8 @@
       sprite ? el('img', { src: spriteUrl(sprite), alt: '' }) : null,
       el('div', {}, el('div', {}, el('strong', {}, it ? describeItem(it) : terrainLabel(tName))),
         el('div', { class: 'muted' }, `Tile ${cell.x + 1}, ${cell.y + 1}` + (it ? ` · on ${it.water ? 'water' : it.kind === 'whirlpool' ? 'whirlpool' : 'land'}` : '')))));
+    if (!it && isBillboardHole(cell.x, cell.y)) box.append(el('p', { class: 'muted' }, 'The left half of the billboard on its right: a billboard is 2 tiles wide and stands over this hole.'));
+    else if (!it && tName === 'billboard') box.append(el('p', { class: 'muted' }, 'A billboard is 2 tiles wide: it also covers the hole on its left.'));
     if (!it) return;
 
     const vehicleOpts = Object.keys(config.vehicle).map((t) => [t, typeName('vehicle', t)]);
