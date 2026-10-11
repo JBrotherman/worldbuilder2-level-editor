@@ -2,7 +2,7 @@
 // them in the editor, and share your own. The server is gallery/worker.js.
 (function () {
   'use strict';
-  const DEFAULT_SERVER = 'https://wb2-gallery.workers.dev';
+  const DEFAULT_SERVER = 'https://wb2-gallery.jbrotherman.workers.dev';
   const SITE = 'https://jbrotherman.github.io/worldbuilder2-level-editor/';
   const KEYS = 'wb2-gallery-keys'; // id -> delete key, for things you shared
   const AUTHOR = 'wb2-gallery-author';

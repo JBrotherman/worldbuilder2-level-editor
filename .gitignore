@@ -14,3 +14,5 @@ levels/*
 !levels/Brickton *.txt
 campaign/campaign.before-*.json
 .wrangler/
+gallery/.admin-token
+gallery/.starter-keys.json
