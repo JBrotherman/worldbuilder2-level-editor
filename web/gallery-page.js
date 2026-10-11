@@ -39,7 +39,7 @@ function askForGame(item) {
       status.textContent = 'Reading the game files…';
       try {
         const found = await web.importFolder(files);
-        if (!found.wb2) throw new Error('No WorldBuilder 2 in that folder. Choose the folder your WorldBuilder2 folder is in (or the WorldBuilder2 folder itself).');
+        if (!found.wb2) throw new Error('No WorldBuilder 2 there (no worldbuilder2.dcr). Choose the folder your WorldBuilder2 folder is in, the WorldBuilder2 folder itself, or the zip it came in.');
         await web.flush();
         saveNextTo = handle; // with the folder picker: save the build right there
         finish(true);
@@ -49,10 +49,12 @@ function askForGame(item) {
       }
     };
     const [pick, pickInput] = web.folderPicker(hasFolderPicker ? 'Choose that folder' : 'Choose your WorldBuilder2 folder', onPick, { mode: 'readwrite' });
+    const [zip, zipInput] = web.zipPicker('choose the zip file', onPick);
     const drop = el('div', { class: 'wb2-drop' },
       el('div', { class: 'wb2-drop-icon', 'aria-hidden': 'true' }, '📁'),
       el('div', { class: 'wb2-actions' }, pick, pickInput),
-      el('p', { class: 'muted' }, hasFolderPicker ? 'or drag your WorldBuilder2 folder here' : 'or drag your WorldBuilder2 folder here (this avoids your browser calling it an "upload")'));
+      el('p', { class: 'muted' }, hasFolderPicker ? 'or drag your WorldBuilder2 folder here' : 'or drag your WorldBuilder2 folder here (this avoids your browser calling it an "upload")'),
+      el('p', { class: 'muted wb2-zip-line' }, 'Have the game as a .zip? Drag it here too, or ', zip, zipInput, '.'));
     web.dropTarget(drop, onPick);
     d.replaceChildren(
       el('h2', {}, `Play “${item.title}”`),
@@ -63,6 +65,7 @@ function askForGame(item) {
       drop,
       status,
       el('p', { class: 'muted' }, 'The game files stay on your computer; they are only read by this page and kept in this browser, so the editor can use them too.'),
+      web.gameHelp(),
       el('menu', {}, el('button', { type: 'button', onclick: () => { d.close(); finish(false); } }, 'Cancel')));
     d.addEventListener('close', () => finish(false), { once: true });
     if (!d.open) d.showModal();
@@ -94,7 +97,7 @@ async function play(item) {
 
 async function start() {
   // editor/gallery.js picks this up.
-  window.WB2_GALLERY_HOST = { play };
+  window.WB2_GALLERY_HOST = { play, gameHelp: web.gameHelp };
   window.WB2_WEB = { api, play, importFolder: web.importFolder };
 }
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Builds the browser version and serves it locally, to try it before
-// publishing: node tools/serve-web.js [port] [--game]
+// publishing: node tools/serve-web.js [port] [--game] [--zip file.zip]
 // With --game it also serves your own game files under /__game/ (only on
-// this PC), so tests can load them without the folder picker.
+// this PC), so tests can load them without the folder picker; --zip serves
+// a zip of the game as /__game/test.zip.
 'use strict';
 const http = require('http');
 const fs = require('fs');
@@ -12,6 +13,8 @@ const paths = require('./paths');
 
 const PORT = Number(process.argv.slice(2).find((a) => /^\d+$/.test(a))) || 4400;
 const SERVE_GAME = process.argv.includes('--game');
+const zipArg = process.argv.indexOf('--zip');
+const TEST_ZIP = zipArg > 0 ? path.resolve(process.argv[zipArg + 1]) : null;
 const OUT = build();
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 
@@ -22,6 +25,7 @@ function gameFile(p) {
     const dir = paths.wb2Dir();
     return Buffer.from(JSON.stringify(fs.readdirSync(dir, { recursive: true }).filter((f) => fs.statSync(path.join(dir, f)).isFile()).map((f) => f.split(path.sep).join('/'))));
   }
+  if (p === '/__game/test.zip') return TEST_ZIP && fs.existsSync(TEST_ZIP) ? fs.readFileSync(TEST_ZIP) : null;
   if (p === '/__game/wb1.dcr') return fs.existsSync(paths.wb1Dcr()) ? fs.readFileSync(paths.wb1Dcr()) : null;
   if (p.startsWith('/__game/wb2/')) {
     const dir = paths.wb2Dir();

@@ -157,7 +157,8 @@
       ? el('div', { class: 'page-intro' },
         el('h1', {}, 'WorldBuilder 2 Gallery'),
         el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Press Play to play one in your own copy of LEGO WorldBuilder 2, or open it in the editor to change it. To share your own, use Share in the ',
-          el('a', { href: 'index.html' }, 'editor'), '.'))
+          el('a', { href: 'index.html' }, 'editor'), '.'),
+        guide())
       : el('div', { class: 'page-intro' },
         el('h1', {}, 'Gallery'),
         el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Play one, or open it here to play with it; share your own with the buttons above or from Share in the Level tab.'));
@@ -170,6 +171,23 @@
       grid,
       more ? el('div', { class: 'gallery-more' }, el('button', { onclick: () => refresh(true) }, 'Show more')) : null);
     for (const canvas of view.querySelectorAll('canvas.gallery-thumb')) drawThumb(canvas);
+  }
+
+  // gallery.html: how playing works, for people new to it. Can be hidden.
+  function guide() {
+    const GUIDE_HIDDEN = 'wb2-gallery-guide-hidden';
+    if (store.get(GUIDE_HIDDEN, false)) {
+      return el('p', {}, el('button', { class: 'link', onclick: () => { store.set(GUIDE_HIDDEN, false); render(); } }, 'How do I play these?'));
+    }
+    return el('section', { class: 'gallery-guide', 'aria-label': 'How to play' },
+      el('div', { class: 'gallery-guide-head' },
+        el('h2', {}, 'New here? Playing takes three steps'),
+        el('button', { class: 'small', onclick: () => { store.set(GUIDE_HIDDEN, true); render(); } }, 'Got it')),
+      el('ol', {},
+        el('li', {}, el('strong', {}, 'Have LEGO WorldBuilder 2'), ' on your Windows PC: a folder called WorldBuilder2, or the zip it came in. Nothing to install.'),
+        el('li', {}, el('strong', {}, 'Press ▶ Play'), ' on a level or campaign and show it where your game is. The first time only.'),
+        el('li', {}, el('strong', {}, 'Open the new “WorldBuilder2 - …” folder'), ' next to your game and double-click Launcher.exe.')),
+      window.WB2_GALLERY_HOST.gameHelp());
   }
 
   function ago(ms) {

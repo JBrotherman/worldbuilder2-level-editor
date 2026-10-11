@@ -75,7 +75,7 @@ function showSetup(error) {
     status.textContent = 'Reading the game files…';
     try {
       const found = await web.importFolder(files);
-      if (!found.wb2) throw new Error('No worldbuilder2.dcr in that folder. Choose the WorldBuilder 2 folder (the one with Launcher.exe and worldbuilder2.dcr, or the folder above it).');
+      if (!found.wb2) throw new Error('No WorldBuilder 2 there (no worldbuilder2.dcr). Choose the WorldBuilder 2 folder (the one with Launcher.exe and worldbuilder2.dcr, or the folder above it), or the zip it came in.');
       if (wantWb1) await web.importFolder(wantWb1, { wb1Only: true });
       await web.flush();
       startGame();
@@ -85,11 +85,13 @@ function showSetup(error) {
     }
   };
   const [pick, pickInput] = web.folderPicker('Choose the folder', onPick);
+  const [zip, zipInput] = web.zipPicker('choose the zip file', onPick);
   const drop = el('div', { class: 'wb2-drop' },
     el('div', { class: 'wb2-drop-icon', 'aria-hidden': 'true' }, '📁'),
     el('p', {}, el('strong', {}, 'Drag your WorldBuilder2 folder here')),
     el('p', { class: 'muted' }, 'or'),
-    el('div', { class: 'wb2-actions' }, pick, pickInput));
+    el('div', { class: 'wb2-actions' }, pick, pickInput),
+    el('p', { class: 'muted wb2-zip-line' }, 'Have the game as a .zip? Drag it here too, or ', zip, zipInput, '.'));
   const wb1Note = el('span', { class: 'muted' });
   const [pick1, pick1Input] = web.folderPicker('Choose the WorldBuilder folder', (files) => {
     if (![...files].some((f) => f.name.toLowerCase() === 'worldbuilder.dcr')) {
@@ -111,6 +113,7 @@ function showSetup(error) {
     status,
     el('p', { class: 'muted' }, 'The game files stay on your computer: this page only reads them and keeps a copy in this browser. Nothing is uploaded.',
       hasFolderPicker ? '' : ' (If you use the button, your browser calls it "uploading"; dragging the folder avoids that.)'),
+    web.gameHelp(),
     el('details', {},
       el('summary', {}, 'Optional: also have the original LEGO WorldBuilder?'),
       el('p', {}, 'It adds the scorpion and T-Rex animations and its 60 missions as templates. Choose its folder before your WorldBuilder 2 folder, or drag both folders here together.'),

@@ -34,3 +34,16 @@
 #wb2Setup.dragging .wb2-drop { border-color: var(--accent); background: var(--panel-2); }
 .wb2-loading-inline { color: var(--muted); }
 .wb2-gallery-link { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+button.link { background: none; border: none; padding: 0; color: var(--blue); text-decoration: underline; cursor: pointer; font: inherit; }
+button.link:hover { background: none; color: #7db8ff; }
+.wb2-zip-line { margin-top: 10px !important; font-size: 13px; }
+.wb2-help { margin: 14px 0 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; line-height: 1.5; }
+.wb2-help summary { cursor: pointer; font-weight: 600; }
+.wb2-help ul { padding-left: 20px; margin: 6px 0; }
+.wb2-help li { margin: 4px 0; }
+.gallery-guide { background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 12px 16px; margin: 6px 0 16px; max-width: 900px; line-height: 1.5; }
+.gallery-guide-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gallery-guide h2 { font-size: 15px; margin: 0; }
+.gallery-guide ol { margin: 8px 0 4px; padding-left: 22px; }
+.gallery-guide li { margin: 4px 0; }
+.gallery-guide .wb2-help { background: var(--panel-2); }

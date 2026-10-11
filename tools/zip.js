@@ -62,7 +62,8 @@ function writeZip(entries) {
   return Buffer.concat([...parts, cdBuf, end]);
 }
 
-// Names and sizes from a zip's central directory.
+// The entries in a zip's central directory: name, size, and where and how
+// the data is stored (for readZipFile).
 function readZipList(buf) {
   const end = buf.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
   if (end < 0) throw new Error('not a zip file');
@@ -71,13 +72,29 @@ function readZipList(buf) {
   const out = [];
   for (let i = 0; i < count; i++) {
     if (buf.readUInt32LE(p) !== 0x02014b50) throw new Error('bad central directory');
-    const size = buf.readUInt32LE(p + 24);
     const nameLen = buf.readUInt16LE(p + 28);
     const skip = nameLen + buf.readUInt16LE(p + 30) + buf.readUInt16LE(p + 32);
-    out.push({ name: buf.toString('utf8', p + 46, p + 46 + nameLen), size });
+    out.push({
+      name: buf.toString('utf8', p + 46, p + 46 + nameLen),
+      size: buf.readUInt32LE(p + 24),
+      compSize: buf.readUInt32LE(p + 20),
+      method: buf.readUInt16LE(p + 10),
+      offset: buf.readUInt32LE(p + 42),
+    });
     p += 46 + skip;
   }
   return out;
 }
 
-module.exports = { writeZip, readZipList };
+// One entry's contents (stored or deflated).
+function readZipFile(buf, entry) {
+  const p = entry.offset;
+  if (buf.readUInt32LE(p) !== 0x04034b50) throw new Error(`bad zip entry ${entry.name}`);
+  const start = p + 30 + buf.readUInt16LE(p + 26) + buf.readUInt16LE(p + 28);
+  const data = buf.subarray(start, start + entry.compSize);
+  if (entry.method === 0) return data;
+  if (entry.method === 8) return zlib.inflateRawSync(data);
+  throw new Error(`${entry.name} uses a zip compression this can't read (method ${entry.method})`);
+}
+
+module.exports = { writeZip, readZipList, readZipFile };

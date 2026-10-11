@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { Buffer } = require('buffer');
 const paths = require('../tools/paths');
-const { writeZip } = require('../tools/zip');
+const { writeZip, readZipList, readZipFile } = require('../tools/zip');
 
 const ROOT = paths.ROOT;
 const GAME2_DIR = path.join(ROOT, 'WorldBuilder2', 'worldbuilder2');
@@ -136,6 +136,34 @@ function dialog(id, className = 'wb2-play') {
 const hasGame = () => fs.existsSync(paths.wb2Dcr());
 const hasWb1 = () => fs.existsSync(path.join(GAME1_DIR, 'worldbuilder.dcr'));
 
+const relPath = (f) => (f.webkitRelativePath || f.name).replace(/\\/g, '/');
+
+// The game as people download it today: a zip. Zips picked or dropped on
+// their own are read as if unpacked; inside a picked folder, only zips that
+// look like the game (so a whole Downloads folder isn't unpacked).
+async function expandZips(list) {
+  const out = [];
+  for (const f of list) {
+    const inFolder = relPath(f).includes('/');
+    if (!/\.zip$/i.test(f.name) || (inFolder && !/world|lego|wb/i.test(f.name))) { out.push(f); continue; }
+    const file = f.getFile ? await f.getFile() : f;
+    if (file.size > 512 * 1024 * 1024) continue;
+    const buf = Buffer.from(await file.arrayBuffer());
+    let entries;
+    try { entries = readZipList(buf); } catch (e) { continue; }
+    const prefix = relPath(f).replace(/\.zip$/i, '');
+    for (const e of entries) {
+      const name = e.name.replace(/\\/g, '/'); // some Windows tools write backslashes
+      if (name.endsWith('/') || /(^|\/)__MACOSX\//.test(name)) continue;
+      out.push(lazyFile(name.split('/').pop(), `${prefix}/${name}`, async () => {
+        const data = readZipFile(buf, e);
+        return { size: data.length, arrayBuffer: async () => data };
+      }));
+    }
+  }
+  return out;
+}
+
 // Reads the picked folder(s): WorldBuilder 2 (required) and WorldBuilder 1,
 // into this browser. Entries are Files, or { name, webkitRelativePath,
 // getFile() } (see below). Returns which games were found, and where the
@@ -145,8 +173,8 @@ async function importFolder(fileList, { wb1Only = false } = {}) {
     const file = f.getFile ? await f.getFile() : f;
     return file.size > 64 * 1024 * 1024 ? null : new Uint8Array(await file.arrayBuffer());
   };
-  const list = [...fileList];
-  const rel = (f) => (f.webkitRelativePath || f.name).replace(/\\/g, '/');
+  const list = await expandZips([...fileList]);
+  const rel = relPath;
   const dirOf = (f) => { const r = rel(f); return r.includes('/') ? r.slice(0, r.lastIndexOf('/')) : ''; };
   const wb2Dcr = list.find((f) => f.name.toLowerCase() === 'worldbuilder2.dcr');
   const wb1Dcr = list.find((f) => f.name.toLowerCase() === 'worldbuilder.dcr');
@@ -232,7 +260,28 @@ function folderPicker(label, onPick, { primary = true, mode = 'read' } = {}) {
   return [button, input];
 }
 
-// Lets folders be dropped on an element; calls onDrop(entries).
+// "Don't have WorldBuilder 2?": where players can find their copy. We don't
+// host or link copies: the game still belongs to LEGO.
+function gameHelp({ open = false } = {}) {
+  return el('details', { class: 'wb2-help', open },
+    el('summary', {}, 'Don\'t have WorldBuilder 2?'),
+    el('p', {}, 'LEGO WorldBuilder 2 is a LEGO computer game from the early 2000s for Windows. LEGO doesn\'t offer it any more, so:'),
+    el('ul', {},
+      el('li', {}, 'If you played it back then, look on your old PC, backup drives or CDs for a folder called ', el('strong', {}, 'WorldBuilder2'),
+        ' (with Launcher.exe and worldbuilder2.dcr inside), or the zip you downloaded it in.'),
+      el('li', {}, 'Fans of old LEGO games keep copies of it on game-preservation sites; searching for “LEGO WorldBuilder 2” finds them. This site doesn\'t host or link to copies, because the game still belongs to LEGO.'),
+      el('li', {}, 'Any copy works as long as it has worldbuilder2.dcr and Launcher.exe. A .zip is fine too: there\'s no need to unpack it.'),
+      el('li', {}, 'The original LEGO WorldBuilder (the first game) is optional: with it, scorpions and T-Rexes are animated and you get its 60 missions as templates.')));
+}
+
+// A link-style button that picks a downloaded zip of the game.
+function zipPicker(label, onPick) {
+  const input = el('input', { type: 'file', accept: '.zip,application/zip', multiple: true, hidden: true });
+  input.addEventListener('change', () => { if (input.files.length) onPick([...input.files], null); input.value = ''; });
+  return [el('button', { type: 'button', class: 'link', onclick: () => input.click() }, label), input];
+}
+
+// Lets folders (or zips) be dropped on an element; calls onDrop(entries).
 function dropTarget(target, onDrop) {
   let depth = 0;
   target.addEventListener('dragenter', (e) => { e.preventDefault(); depth++; target.classList.add('dragging'); });
@@ -368,5 +417,5 @@ async function showPlayDialog(outDir, kind, { title = '', saveTo = null } = {}) 
 module.exports = {
   ROOT, GAME2_DIR, GAME1_DIR, idb, loadStoredFiles, flush, savedHandle, saveHandle,
   $, el, nextFrame, hasFolderPicker, download, dialog,
-  hasGame, hasWb1, importFolder, readDirectoryHandle, folderPicker, dropTarget, showPlayDialog,
+  hasGame, hasWb1, importFolder, readDirectoryHandle, folderPicker, zipPicker, gameHelp, dropTarget, showPlayDialog,
 };
