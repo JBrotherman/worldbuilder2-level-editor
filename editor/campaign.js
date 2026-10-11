@@ -69,6 +69,7 @@
       fetch('/api/campaign').then((r) => r.json()),
       fetch('/api/custom').then((r) => r.json()),
     ]);
+    if (c.error) return; // e.g. the browser version without the game files
     original = c.original;
     missions = c.campaign.missions || {};
     savedJson = JSON.stringify(missions);
@@ -277,11 +278,15 @@
   // Export: one JSON file with the mission setup, every level it uses and the
   // unit settings (if tuned).
   async function exportCampaign() {
-    api.downloadFile('my-campaign.wb2campaign.json', await campaignFile(), 'application/json');
+    const file = await campaignFile();
+    if (file) api.downloadFile('my-campaign.wb2campaign.json', file, 'application/json');
   }
 
+  // The campaign as a .wb2campaign.json text; null if it can't be loaded
+  // (the browser version without the game files).
   async function campaignFile() {
     if (!loaded) await load();
+    if (!loaded) return null;
     const levels = {};
     for (const mm of Object.values(missions)) {
       if (!mm.level) continue;
@@ -296,6 +301,7 @@
   // Returns true when the campaign was imported.
   async function importCampaign(text) {
     if (!loaded) await load();
+    if (!loaded) return false;
     let data;
     try { data = JSON.parse(text); } catch (e) { api.toast('That file is not a campaign file.', true); return false; }
     if (!data || data.format !== 'wb2-campaign' || typeof data.missions !== 'object') { api.toast('That file is not a campaign file.', true); return false; }

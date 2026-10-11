@@ -12,10 +12,16 @@
   const MARGIN_TOP = 80, MARGIN = 24;
 
   const LOWERED = new Set(['water', 'water_undiggable', 'water_reefs', 'water_whirlpool', 'hole']);
+  // Terrain colours for when there are no game pictures (the browser
+  // version before the game files are added).
   const FALLBACK_COLORS = {
-    normal: '#3d9b35', water: '#2f8fd8', mountain: '#8a7a66', hole: '#1a1a1a', swamp: '#4f6b2a',
-    volcano: '#7a3020', billboard: '#ddd', goal: '#d9c64a', cement: '#aaa',
+    normal: '#3fae5c', normal_undiggable: '#6f9a5a', tree: '#1f7a3d', tree2: '#1f7a3d', tree3: '#1f7a3d', tree4: '#2a8a45',
+    jungle1: '#2f9450', jungle2: '#2f9450', jungle3: '#2f9450', jungle4: '#2f9450', swamp: '#5d7d3c',
+    water: '#1fb5e6', water_undiggable: '#127fb5', water_reefs: '#4fc0c8', water_whirlpool: '#1f8fd0',
+    mountain: '#8c8577', volcano: '#b0503a', hole: '#2a2420', goal: '#e6c84a', cement: '#a9b4b8',
+    billboard: '#c9a227', roadblock: '#d0703a', street_undiggable: '#4c585e',
   };
+  const fallbackColor = (name) => FALLBACK_COLORS[name] || (/^street/.test(name) ? '#5f6e75' : '#3fae5c');
 
   class MapView {
     constructor(canvas, catalog) {
@@ -182,7 +188,7 @@
       const sprite = this.terrainSprite(name);
       if (sprite && this.drawSprite(sprite, a.x, a.y)) return;
       this.facePath(this.ctx, x, y);
-      this.ctx.fillStyle = FALLBACK_COLORS[name] || '#3d9b35';
+      this.ctx.fillStyle = fallbackColor(name);
       this.ctx.fill();
     }
 
@@ -286,5 +292,6 @@
     ctx.restore();
   }
 
+  MapView.terrainColor = fallbackColor;
   window.MapView = MapView;
 })();

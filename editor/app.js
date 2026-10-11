@@ -85,15 +85,24 @@
   }
 
   function buildPalette() {
-    const pal = $('#palette');
     const sections = [];
     sections.push({
       title: 'Terrain',
       entries: catalog.terrain.map((t) => ({
         label: terrainLabel(t.name), title: `${terrainLabel(t.name)}  (map character "${t.char}")`,
         sprite: view.first(`terrain.${t.name}`), brush: { type: 'terrain', char: t.char },
+        color: catalog.preview ? MapView.terrainColor(t.name) : null,
       })),
     });
+    // The browser version before the game files are added: only terrain,
+    // drawn in colours (see web/main.js).
+    if (catalog.preview) {
+      buildPaletteSections(sections);
+      $('#palette').append(el('div', { class: 'pal-preview-note' },
+        el('p', {}, 'Vehicles, buildings, monsters, brick piles, plans and goals come from your copy of WorldBuilder 2.'),
+        el('button', { class: 'primary small', onclick: () => window.WB2_REQUEST_GAME && window.WB2_REQUEST_GAME('palette') }, 'Add game files')));
+      return;
+    }
     // Types without any graphics (e.g. the unfinished bluebird) are left out.
     const unitEntries = (cat) => Object.entries(config[cat]).filter(([type]) => MapView.unitSprite(view, cat, type, false)).map(([type, def]) => {
       const item = { kind: 'unit', cat, type, water: false };
@@ -139,6 +148,11 @@
       entries: [{ label: 'Whirlpool', title: 'Whirlpool (numbered; they seem to link in pairs 1↔2, 3↔4…)', sprite: 'whirlpool.generic', brush: { type: 'item', item: { kind: 'whirlpool', n: 1 } } }],
     });
 
+    buildPaletteSections(sections);
+  }
+
+  function buildPaletteSections(sections) {
+    const pal = $('#palette');
     pal.innerHTML = '';
     state.paletteButtons = [];
     for (const s of sections) {
@@ -146,7 +160,8 @@
       const sec = el('div', { class: 'pal-section' + (['Monsters', 'Buildings', 'Special'].includes(s.title) ? '' : '') },
         el('h3', { onclick: () => sec.classList.toggle('collapsed') }, s.title), grid);
       for (const e of s.entries) {
-        const fallback = e.brush.type === 'terrain' ? el('span', { class: 'hole-icon' }) : '?';
+        const fallback = e.color ? el('span', { class: 'swatch-icon', style: `background:${e.color}` })
+          : e.brush.type === 'terrain' ? el('span', { class: 'hole-icon' }) : '?';
         const icon = el('span', { class: 'pal-icon' + (e.plan ? ' plan' : '') }, e.sprite ? el('img', { src: spriteUrl(e.sprite), alt: '' }) : fallback);
         const b = el('button', {
           class: 'pal-item', title: e.title, 'aria-pressed': 'false',
@@ -546,7 +561,10 @@
   }
 
   function renderProblems() {
-    const problems = Level.validate(state.level, catalog);
+    // Checking needs the game's unit definitions.
+    const problems = catalog.preview
+      ? [{ severity: 'warning', message: 'Add your game files (top right) to check this level and place vehicles, buildings and goals.', cells: [] }]
+      : Level.validate(state.level, catalog);
     state.problems = problems;
     const list = $('#problems');
     list.innerHTML = '';
@@ -898,11 +916,15 @@
 
   // Re-read unit definitions after the Units tab saves, so names, recipes and
   // level checks use the tuned values.
+  // Also called once the browser version gets its game files: the whole
+  // catalog (pictures, terrain, original levels) is replaced.
   async function refreshCatalog() {
     const fresh = await (await fetch('/api/catalog')).json();
     for (const k of Object.keys(config)) delete config[k];
     Object.assign(config, fresh.config);
-    catalog.configTuned = fresh.configTuned;
+    Object.assign(catalog, { configTuned: fresh.configTuned, terrain: fresh.terrain, levels: fresh.levels, sprites: fresh.sprites, preview: !!fresh.preview });
+    view.terrainByChar = Object.fromEntries(catalog.terrain.map((t) => [t.char, t.name]));
+    view.images.clear();
     buildPalette();
     setBrush(state.brush);
     renderAll();

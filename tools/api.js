@@ -101,7 +101,7 @@ function createApi({ launch, log = console }) {
   // Returns { status, type, body } or null when the path isn't an API path.
   function route(method, p, query, body) {
     if (p === '/api/catalog') return { status: 200, type: 'application/json', body: getCatalogJson() };
-    const { cat, sprites, originalConfig } = loaded;
+    const { cat, sprites, originalConfig } = loaded || {};
 
     if (p === '/api/campaign') {
       if (method === 'GET') return ok({ campaign: campaign.loadCampaign(), original: campaign.originals(cat.game) });
@@ -179,8 +179,9 @@ function createApi({ launch, log = console }) {
 
   // Like route(), but errors become JSON error responses. Without the game
   // every API path answers 503.
+  // Saved levels (/api/custom) work without the game; everything else needs it.
   function handle(method, p, query, body) {
-    if (!loadGame()) {
+    if (p !== '/api/custom' && !loadGame()) {
       if (p.startsWith('/api/') || p.startsWith('/sprite/')) {
         return { status: 503, type: 'application/json', body: JSON.stringify({ error: 'WorldBuilder 2 was not found. Reload the editor page to see how to set it up.' }) };
       }

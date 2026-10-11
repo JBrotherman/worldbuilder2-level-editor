@@ -71,6 +71,7 @@
   async function load(force = false) {
     if (loaded && !force) { render(); return; }
     const data = await (await fetch('/api/config')).json();
+    if (data.error) return; // e.g. the browser version without the game files
     cfg = Lingo.parseConfig(data.text);
     origCfg = Lingo.parseConfig(data.original);
     savedText = Lingo.writeConfig(cfg);

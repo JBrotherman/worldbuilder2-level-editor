@@ -419,6 +419,7 @@
       title = api.state.level.meta.title || api.state.level.name || '';
     } else {
       data = await api.campaignFile();
+      if (!data) return;
       title = '';
       const missions = Object.values(JSON.parse(data).missions || {}).filter((m) => m && m.level).length;
       if (!missions) {
