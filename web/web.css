@@ -27,3 +27,8 @@
 .wb2-play p { margin: 6px 0; }
 .wb2-gamefiles { margin-left: 8px; }
 .muted { color: var(--muted); }
+.wb2-drop { border: 2px dashed var(--line); border-radius: 12px; padding: 22px 16px; margin: 14px 0 4px; text-align: center; background: var(--panel); }
+.wb2-drop p { margin: 2px 0; }
+.wb2-drop .wb2-actions { justify-content: center; margin: 8px 0 0; }
+.wb2-drop-icon { font-size: 34px; line-height: 1; margin-bottom: 6px; }
+#wb2Setup.dragging .wb2-drop { border-color: var(--accent); background: var(--panel-2); }

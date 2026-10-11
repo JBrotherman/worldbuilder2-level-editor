@@ -165,6 +165,7 @@ function overlay() {
   if (!o) {
     o = el('div', { id: 'wb2Setup', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'wb2SetupTitle' });
     document.body.append(o);
+    dropTarget(o, (files) => { if (setupDrop) setupDrop(files); });
   }
   o.hidden = false;
   return o;
@@ -175,7 +176,12 @@ function showLoading(text) {
 }
 
 // Reads the picked folder(s): WorldBuilder 2 (required) and WorldBuilder 1.
+// Entries are Files, or { name, webkitRelativePath, getFile() } (see below).
 async function importFolder(fileList, { wb1Only = false } = {}) {
+  const bytes = async (f) => {
+    const file = f.getFile ? await f.getFile() : f;
+    return file.size > 64 * 1024 * 1024 ? null : new Uint8Array(await file.arrayBuffer());
+  };
   const list = [...fileList];
   const rel = (f) => (f.webkitRelativePath || f.name).replace(/\\/g, '/');
   const dirOf = (f) => { const r = rel(f); return r.includes('/') ? r.slice(0, r.lastIndexOf('/')) : ''; };
@@ -192,24 +198,94 @@ async function importFolder(fileList, { wb1Only = false } = {}) {
     if (fs.existsSync(GAME2_DIR)) fs.rmSync(GAME2_DIR, { recursive: true });
     for (const f of inside) {
       const sub = base ? rel(f).slice(base.length + 1) : rel(f);
-      if (f.size > 64 * 1024 * 1024) continue;
-      fs.writeFileSync(path.join(GAME2_DIR, sub), new Uint8Array(await f.arrayBuffer()));
+      const data = await bytes(f);
+      if (data) fs.writeFileSync(path.join(GAME2_DIR, sub), data);
     }
     found.wb2 = true;
   }
   if (wb1Dcr) {
-    fs.writeFileSync(path.join(GAME1_DIR, 'worldbuilder.dcr'), new Uint8Array(await wb1Dcr.arrayBuffer()));
+    fs.writeFileSync(path.join(GAME1_DIR, 'worldbuilder.dcr'), await bytes(wb1Dcr));
     found.wb1 = true;
   }
   return found;
 }
 
+// Folders are read from a folder picker or a drop. Big folders (someone
+// picking their whole Documents) are cut short: the game is near the top.
+const MAX_ENTRIES = 5000;
+const MAX_DEPTH = 4;
+const lazyFile = (name, relPath, getFile) => ({ name, webkitRelativePath: relPath, getFile });
+
+// Chrome and Edge: showDirectoryPicker, which asks to "view files".
+async function readDirectoryHandle(dir, prefix = dir.name, out = [], depth = 0) {
+  for await (const [name, h] of dir.entries()) {
+    if (out.length >= MAX_ENTRIES) break;
+    const relPath = `${prefix}/${name}`;
+    if (h.kind === 'file') out.push(lazyFile(name, relPath, () => h.getFile()));
+    else if (depth < MAX_DEPTH) await readDirectoryHandle(h, relPath, out, depth + 1);
+  }
+  return out;
+}
+
+// Every browser: folders dragged onto the page.
+async function readDroppedEntries(entries) {
+  const out = [];
+  const walk = async (entry, depth) => {
+    if (out.length >= MAX_ENTRIES) return;
+    const relPath = entry.fullPath.replace(/^\//, '');
+    if (entry.isFile) {
+      out.push(lazyFile(entry.name, relPath, () => new Promise((resolve, reject) => entry.file(resolve, reject))));
+    } else if (entry.isDirectory && depth <= MAX_DEPTH) {
+      const reader = entry.createReader();
+      for (;;) {
+        const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+        if (!batch.length) break;
+        for (const e of batch) await walk(e, depth + 1);
+      }
+    }
+  };
+  for (const e of entries) await walk(e, 0);
+  return out;
+}
+
+// Elsewhere: <input webkitdirectory>, which browsers word as an "upload".
+const hasFolderPicker = typeof window.showDirectoryPicker === 'function';
+
 function folderPicker(label, onPick, { primary = true } = {}) {
   const input = el('input', { type: 'file', webkitdirectory: true, multiple: true, hidden: true });
   input.addEventListener('change', () => { if (input.files.length) onPick(input.files); input.value = ''; });
-  const button = el('button', { type: 'button', class: primary ? 'primary' : '', onclick: () => input.click() }, label);
+  const choose = async () => {
+    if (!hasFolderPicker) return input.click();
+    let dir;
+    try {
+      dir = await window.showDirectoryPicker({ id: 'wb2-game', mode: 'read' });
+    } catch (e) {
+      if (e.name !== 'AbortError') input.click(); // e.g. a folder the browser won't open
+      return;
+    }
+    onPick(await readDirectoryHandle(dir));
+  };
+  const button = el('button', { type: 'button', class: primary ? 'primary' : '', onclick: choose }, label);
   return [button, input];
 }
+
+// Lets folders be dropped on an element; calls onDrop(entries).
+function dropTarget(target, onDrop) {
+  let depth = 0;
+  target.addEventListener('dragenter', (e) => { e.preventDefault(); depth++; target.classList.add('dragging'); });
+  target.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; target.classList.remove('dragging'); } });
+  target.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  target.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    depth = 0;
+    target.classList.remove('dragging');
+    const entries = [...e.dataTransfer.items].map((i) => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+    if (entries.length) onDrop(await readDroppedEntries(entries));
+  });
+}
+
+// What a folder dropped on the welcome screen does (set by showSetup).
+let setupDrop = null;
 
 function showSetup(error) {
   const status = el('p', { class: 'wb2-status' + (error ? ' error' : ''), role: 'status' }, error || '');
@@ -228,7 +304,12 @@ function showSetup(error) {
       status.textContent = e.message;
     }
   };
-  const [pick, pickInput] = folderPicker('Choose your WorldBuilder 2 folder', onPick);
+  const [pick, pickInput] = folderPicker('Choose the folder', onPick);
+  const drop = el('div', { class: 'wb2-drop' },
+    el('div', { class: 'wb2-drop-icon', 'aria-hidden': 'true' }, '📁'),
+    el('p', {}, el('strong', {}, 'Drag your WorldBuilder2 folder here')),
+    el('p', { class: 'muted' }, 'or'),
+    el('div', { class: 'wb2-actions' }, pick, pickInput));
   const wb1Note = el('span', { class: 'muted' });
   const [pick1, pick1Input] = folderPicker('Choose the WorldBuilder folder', (files) => {
     if (![...files].some((f) => f.name.toLowerCase() === 'worldbuilder.dcr')) {
@@ -243,14 +324,15 @@ function showSetup(error) {
     el('h1', { id: 'wb2SetupTitle' }, el('span', { class: 'brick' }), 'WorldBuilder 2 Level Editor'),
     el('p', { class: 'wb2-lead' }, 'Make your own missions and campaigns for LEGO WorldBuilder 2, and play them in the real game.'),
     el('h2', {}, 'Your copy of the game'),
-    el('p', {}, 'The editor uses your own copy of WorldBuilder 2 for its pictures, missions and rules. Choose its folder: the one with ',
+    el('p', {}, 'The editor uses your own copy of WorldBuilder 2 for its pictures, missions and rules. Show it where the game is: the folder with ',
       el('code', {}, 'Launcher.exe'), ' and ', el('code', {}, 'worldbuilder2.dcr'), ' in it, or the folder above it.'),
-    el('p', { class: 'muted' }, 'The files are only read by this page and kept in this browser, on your computer: nothing is uploaded. Your browser may still ask whether to "upload" them; that\'s just how it words reading a folder.'),
-    el('div', { class: 'wb2-actions' }, pick, pickInput),
+    drop,
     status,
+    el('p', { class: 'muted' }, 'The game files stay on your computer: this page only reads them and keeps a copy in this browser. Nothing is uploaded.',
+      hasFolderPicker ? '' : ' (If you use the button, your browser calls it "uploading"; dragging the folder avoids that.)'),
     el('details', {},
       el('summary', {}, 'Optional: also have the original LEGO WorldBuilder?'),
-      el('p', {}, 'It adds the scorpion and T-Rex animations and its 60 missions as templates. Choose its folder before your WorldBuilder 2 folder.'),
+      el('p', {}, 'It adds the scorpion and T-Rex animations and its 60 missions as templates. Choose its folder before your WorldBuilder 2 folder, or drag both folders here together.'),
       el('div', { class: 'wb2-actions' }, pick1, pick1Input, wb1Note)),
     el('h2', {}, 'Good to know'),
     el('ul', {},
@@ -258,10 +340,12 @@ function showSetup(error) {
       el('li', {}, 'Your levels stay in this browser. Use Share and Export to send them to friends or keep a backup.'),
       el('li', {}, 'Prefer to run it on your own PC? ', el('a', { href: 'https://github.com/JBrotherman/worldbuilder2-level-editor', target: '_blank', rel: 'noopener' }, 'Download it from GitHub'), '.')),
     el('p', { class: 'muted wb2-legal' }, 'LEGO and WorldBuilder are trademarks of the LEGO Group, which does not make or endorse this editor. The game is not included.')));
+  setupDrop = onPick;
   pick.focus();
 }
 
 async function startGame() {
+  setupDrop = null;
   showLoading('Loading your game…');
   await nextFrame();
   if (api.loadGame({ retry: true })) {
