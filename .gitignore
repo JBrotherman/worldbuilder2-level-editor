@@ -8,3 +8,8 @@ build/
 extracted/
 node_modules/
 .claude/
+# Personal and test levels: only the campaign levels are shared
+levels/*
+!levels/Brickwood *.txt
+!levels/Brickton *.txt
+campaign/campaign.before-*.json
