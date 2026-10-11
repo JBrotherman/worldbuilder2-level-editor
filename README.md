@@ -10,7 +10,7 @@ opens the gallery of levels and campaigns players made; the **Editor** tab
 folder (or its zip) once, and everything runs in your browser (the game files
 stay on your computer). To play, it gives you a ready-to-play copy of the
 game, saved next to your WorldBuilder2 folder or as a zip. Your levels are
-kept in that browser, so use Share and Export for backups.
+kept in that browser, so use Share for backups.
 
 Or run it on your own PC, as below: that version starts the game for you, in
 a resizable window.
@@ -61,12 +61,12 @@ server and opens the editor at <http://localhost:4321/>. Keep the black window
 open while you edit; closing it stops the editor. **`Play WorldBuilder
 2.bat`** plays the unmodified game in a resizable window.
 
-**Share a level:** **Share** gives a share code (`WB2:…`) to paste in a chat
-or forum, or a level file to download. The other player clicks **Import** and
-pastes the code or opens the file.
+**Share a level:** **Share** puts it in the online gallery, or gives a share
+code (`WB2:…`) to paste in a chat or forum, or a level file to download. The
+other player clicks **Open**, then **Paste a code or open a file…**.
 
-**Share a campaign:** in the **Campaign** tab, **Export** saves one
-`.wb2campaign.json` file with the mission setup, every level it uses and your
+**Share a campaign:** in the **Campaign** tab, **Share** puts it in the
+gallery, or **Download file** saves one `.wb2campaign.json` file with the mission setup, every level it uses and your
 unit settings. The other player opens it with **Import** in their Campaign tab
 and presses **Play campaign**.
 
@@ -94,20 +94,26 @@ shared.
 
 Units and plans placed on water automatically use their water version.
 
-- **Share:** gives a share code (`WB2:…`) to send to someone, or a level file
-  to download. **Import** accepts a share code, level text or a file.
+- **Share:** puts the level in the online gallery, or gives a share code
+  (`WB2:…`) to send to someone, or a level file to download. **Open** has
+  **Paste a code or open a file…** for levels someone sent you.
 
 ## Campaign tab
 
-Choose a level for each of the 24 missions (or keep the original), give it a
-title, and click the numbers to choose which missions it unlocks when
-completed. Missions nothing unlocks are flagged as unreachable. Mission 1 of
-each world is always open; World 2 opens after every World 1 mission is done.
+Choose a level for each of the 24 missions (keep the original, or leave it
+**Not used**), give it a title, and click the numbers to choose which missions
+it unlocks when completed. Unused missions stay locked, and the game doesn't
+show locked missions on the world map, so a campaign can have any number of
+missions. **New** starts a campaign with every mission unused; choosing a
+level for the next mission links it to the one before. Missions nothing
+unlocks are flagged as unreachable. The campaign starts at mission 1.1;
+World 2 opens when a World 1 mission that unlocks **World 2** is completed.
 
 **Play campaign** builds the whole campaign into `build/campaign/` and starts
 it. Options: start with fresh progress, or unlock (complete) every mission for
-testing. **Export** saves the campaign, the levels it uses and your unit
-settings as one `.wb2campaign.json` file; **Import** loads one. The setup is
+testing. **Share** puts the campaign in the gallery, or downloads it with
+the levels it uses and your unit settings as one `.wb2campaign.json` file;
+**Import** loads one. The setup is
 stored in `campaign/campaign.json`.
 
 ## Units tab
@@ -122,9 +128,10 @@ campaign**, and the level checks use them too.
 ## Gallery tab
 
 Browse the levels and campaigns other players shared, as a table you can
-search and sort on any column (name, type, missions, creator, plays, date):
-**Play** one, open a level in the editor or import a campaign. Share your own with **Share my level** / **Share my campaign** (or
-**Share to gallery** in the Level tab's Share dialog and the Campaign tab).
+search and sort on any column (name, type, missions, creator, plays, likes,
+dislikes, date): **Play** one, 👍 or 👎 it (once each; click again to take it
+back), open a level in the editor or import a campaign. Share your own
+with **Share to gallery** in the Editor's Level or Campaign tab.
 There are no accounts: you can delete what you shared from the same browser.
 **Report** asks why: things five people report as spam or inappropriate are
 hidden, and once two players report something as impossible to finish, the

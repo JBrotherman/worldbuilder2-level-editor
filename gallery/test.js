@@ -92,6 +92,26 @@ try {
   await reportAs('7.7.7.7', 'spam');
   check(!(await call('GET', '/api/items')).body.items.some((x) => x.id === imp.body.id), 'hidden once 5 people report spam/inappropriate');
 
+  // Likes and dislikes: one vote per person, which they can change or take back.
+  const liked = await call('POST', '/api/items', { body: { type: 'level', title: 'Liked one', data: levelText }, ip: '2.2.2.4' });
+  const voteAs = (ip, v) => call('POST', `/api/items/${liked.body.id}/vote`, { ip, body: { vote: v } });
+  check((await voteAs('8.8.8.1', 5)).status === 400, 'an unknown vote is refused');
+  const v1 = await voteAs('8.8.8.1', 1);
+  check(v1.status === 200 && v1.body.likes === 1 && v1.body.dislikes === 0 && v1.body.myVote === 1, 'like it');
+  await voteAs('8.8.8.1', 1);
+  await voteAs('8.8.8.2', 1);
+  await voteAs('8.8.8.3', -1);
+  const findLiked = async (ip) => (await call('GET', '/api/items', { ip })).body.items.find((x) => x.id === liked.body.id);
+  let lv = await findLiked('8.8.8.1');
+  check(lv.likes === 2 && lv.dislikes === 1, 'votes count once per person (2 likes, 1 dislike)');
+  check(lv.myVote === 1 && (await findLiked('8.8.8.3')).myVote === -1 && (await findLiked('8.8.8.9')).myVote === 0, 'each person sees their own vote');
+  const v2 = await voteAs('8.8.8.1', -1);
+  check(v2.body.likes === 1 && v2.body.dislikes === 2, 'change a like into a dislike');
+  const v3 = await voteAs('8.8.8.1', 0);
+  check(v3.body.likes === 1 && v3.body.dislikes === 1 && v3.body.myVote === 0, 'take a vote back');
+  check((await call('GET', `/api/items/${liked.body.id}?peek`, { ip: '8.8.8.2' })).body.myVote === 1, 'opening it includes your vote');
+  check((await call('POST', '/api/items/zzzzzzzz/vote', { body: { vote: 1 } })).status === 404, 'voting on something missing');
+
   // Rate limit: 10 uploads per hour per IP.
   let lastStatus;
   for (let i = 0; i < 11; i++) lastStatus = (await call('POST', '/api/items', { body: { type: 'level', title: `L${i}`, data: levelText }, ip: '4.4.4.4' })).status;
@@ -110,6 +130,10 @@ try {
   check(authors.join() === [...authors].sort().join(), 'sort by creator');
   const plays = (await call('GET', '/api/items?sort=downloads')).body.items.map((i) => i.downloads);
   check(plays.join() === [...plays].sort((a, b) => b - a).join(), 'sort by plays');
+  const likes = (await call('GET', '/api/items?sort=likes')).body.items;
+  check(likes[0].id === liked.body.id && likes.map((i) => i.likes).join() === likes.map((i) => i.likes).sort((a, b) => b - a).join(), 'sort by likes');
+  const dislikes = (await call('GET', '/api/items?sort=dislikes&dir=asc')).body.items.map((i) => i.dislikes);
+  check(dislikes.join() === [...dislikes].sort((a, b) => a - b).join() && dislikes.includes(1), 'sort by dislikes');
   check((await call('GET', '/api/items?sort=bogus')).status === 200, 'unknown sort falls back to newest');
 
   const pre = await fetch(BASE + '/api/items', { method: 'OPTIONS', headers: { Origin: 'https://evil.example' } });

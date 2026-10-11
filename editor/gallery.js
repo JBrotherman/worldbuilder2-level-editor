@@ -54,10 +54,6 @@
     api = window.wb2;
     el = api.el;
     api.shareToGallery = share;
-    document.querySelector('#galleryActions').append(
-      el('button', { title: 'Share the level you have open in the Level tab', onclick: () => share('level') }, 'Share my level'),
-      el('button', { title: 'Share your campaign (from the Campaign tab)', onclick: () => share('campaign') }, 'Share my campaign'),
-    );
     document.querySelector('#btnGalleryShare').addEventListener('click', () => {
       document.querySelector('#dlgShare').close();
       share('level');
@@ -158,7 +154,7 @@
         guide())
       : el('div', { class: 'page-intro' },
         el('h1', {}, 'Gallery'),
-        el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Play one, or open it here to play with it; share your own with the buttons above or from Share in the Level tab.'));
+        el('p', { class: 'muted' }, 'Levels and campaigns made by other players. Play one, or open it here to play with it; share your own with Share to gallery in the Editor\'s Level or Campaign tab.'));
     const parts = [
       intro,
       featured ? el('section', { class: 'gallery-featured' }, el('h2', {}, 'Shared with you'), table([featured], { sortable: false })) : null,
@@ -180,6 +176,8 @@
     { cls: 'col-num', label: 'Missions', key: 'missions' },
     { cls: 'col-author', label: 'Creator', key: 'author' },
     { cls: 'col-num', label: 'Plays', key: 'downloads' },
+    { cls: 'col-vote', label: 'Likes', key: 'likes' },
+    { cls: 'col-vote', label: 'Dislikes', key: 'dislikes' },
     { cls: 'col-date', label: 'Added', key: 'created' },
     { cls: 'col-actions', label: 'Actions', hidden: true },
   ];
@@ -262,10 +260,39 @@
       el('td', { class: 'col-num', 'data-label': 'Missions' }, String(isLevel ? 1 : item.info.missions || 0)),
       el('td', { class: 'col-author', 'data-label': 'By' }, item.author),
       el('td', { class: 'col-num', 'data-label': 'Plays' }, String(item.downloads || 0)),
+      el('td', { class: 'col-vote' }, voteButton(item, 1)),
+      el('td', { class: 'col-vote' }, voteButton(item, -1)),
       el('td', { class: 'col-date', title: new Date(item.created).toLocaleString() }, ago(item.created)),
       el('td', { class: 'col-actions' },
         el('button', { class: 'primary small', title: 'Play it in your own copy of WorldBuilder 2', onclick: () => playItem(item) }, '▶ Play'),
         menu));
+  }
+
+  // 👍 or 👎 with its count; pressing it again takes your vote back.
+  function voteButton(item, value) {
+    const on = item.myVote === value;
+    const count = (value === 1 ? item.likes : item.dislikes) || 0;
+    const what = value === 1 ? 'like' : 'dislike';
+    return el('button', {
+      type: 'button', class: 'vote' + (on ? ' on' : ''), 'aria-pressed': String(on),
+      title: on ? `You ${what} this. Click to take it back.` : `I ${what} this`,
+      'aria-label': `${what === 'like' ? 'Likes' : 'Dislikes'}: ${count}`,
+      onclick: () => vote(item, on ? 0 : value),
+    }, value === 1 ? '👍' : '👎', ` ${count}`);
+  }
+
+  async function vote(item, value) {
+    try {
+      const res = await call(`/api/items/${item.id}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vote: value }),
+      });
+      Object.assign(item, res);
+      render();
+    } catch (e) {
+      api.toast(e.message, true);
+    }
   }
 
   // The "⋯" menu floats above the page (the table and the scrolling page
@@ -444,9 +471,15 @@
 
   async function share(type) {
     let data, title;
+    // Only things others can finish go in the gallery.
+    const refuse = (what, lines, after = '') => api.messageDialog(`Fix this ${what} first`,
+      `It can't go in the gallery yet:\n\n${lines.slice(0, 6).map((l) => `• ${l}`).join('\n')}${lines.length > 6 ? `\n• …and ${lines.length - 6} more.` : ''}${after ? `\n\n${after}` : ''}`);
     if (type === 'level') {
       const errors = (api.state.problems || []).filter((p) => p.severity === 'error');
-      if (errors.length && !(await api.confirmDialog('Share anyway?', `This level has ${errors.length} error(s): ${errors[0].message} Others may not be able to finish it.`, 'Share anyway'))) return;
+      if (errors.length) {
+        await refuse('level', errors.map((p) => p.message), 'They are listed under Problems, on the right.');
+        return;
+      }
       data = api.levelText();
       title = api.state.level.meta.title || api.state.level.name || '';
     } else {
@@ -456,6 +489,11 @@
       const missions = Object.values(JSON.parse(data).missions || {}).filter((m) => m && m.level).length;
       if (!missions) {
         api.toast('Your campaign doesn\'t use any of your own levels yet. Choose levels for its missions in the Campaign tab first.', true, 7000);
+        return;
+      }
+      const problems = await api.campaignProblems();
+      if (problems.length) {
+        await refuse('campaign', problems);
         return;
       }
     }

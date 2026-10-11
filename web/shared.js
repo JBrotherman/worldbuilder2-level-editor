@@ -77,7 +77,7 @@ async function flush() {
   } catch (e) {
     if (!storageWarned) {
       storageWarned = true;
-      alert(`This browser didn't let the editor save its files (${e.message}). Your work lasts until you close the page; use Share or Export to keep copies.`);
+      alert(`This browser didn't let the editor save its files (${e.message}). Your work lasts until you close the page; use Share to keep copies.`);
     }
   }
 }
@@ -333,7 +333,7 @@ function showGameFiles() {
   d.replaceChildren(
     el('h2', {}, 'Game files'),
     el('p', {}, 'WorldBuilder 2: ✓ added. Original WorldBuilder: ', hasWb1() ? '✓ added.' : 'not added (optional).'),
-    el('p', { class: 'muted' }, 'They are kept in this browser only, for the gallery and the editor. Your levels, campaign and unit settings are kept here too: use Share and Export for backups.'),
+    el('p', { class: 'muted' }, 'They are kept in this browser only, for the gallery and the editor. Your levels, campaign and unit settings are kept here too: use Share for backups.'),
     el('div', { class: 'wb2-actions' }, pick2, in2, pick1, in1, forget),
     status,
     el('menu', {}, el('button', { type: 'button', onclick: () => d.close() }, 'Close')));

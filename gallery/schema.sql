@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS items (
   downloads INTEGER NOT NULL DEFAULT 0,
   reports INTEGER NOT NULL DEFAULT 0,    -- spam/inappropriate reports (hidden at 5)
   impossible INTEGER NOT NULL DEFAULT 0, -- players who say it can't be finished
+  likes INTEGER NOT NULL DEFAULT 0,
+  dislikes INTEGER NOT NULL DEFAULT 0,
   delete_hash TEXT NOT NULL,     -- SHA-256 of the uploader's delete key
   ip_hash TEXT NOT NULL          -- for rate limiting (salted hash, not the IP)
 );
@@ -25,4 +27,13 @@ CREATE TABLE IF NOT EXISTS item_reports (
   reason TEXT NOT NULL,
   created INTEGER NOT NULL,
   PRIMARY KEY (item_id, ip_hash, reason)
+);
+
+-- One like (1) or dislike (-1) per person and item.
+CREATE TABLE IF NOT EXISTS item_votes (
+  item_id TEXT NOT NULL,
+  ip_hash TEXT NOT NULL,
+  vote INTEGER NOT NULL,
+  created INTEGER NOT NULL,
+  PRIMARY KEY (item_id, ip_hash)
 );

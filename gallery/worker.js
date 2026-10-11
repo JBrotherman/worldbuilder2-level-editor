@@ -4,12 +4,16 @@
 // (kept by the uploader's browser), uploads are rate limited per IP (stored
 // only as a salted hash), and items several people report as spam or
 // inappropriate are hidden; "impossible" reports are shown as a warning.
+// Players can like or dislike things, once each (per IP hash, like reports).
 //
-//   GET    /api/items?type=level|campaign&sort=created|downloads|title|author|type|missions&dir=asc|desc&q=…&offset=0
+//   GET    /api/items?type=level|campaign&sort=created|downloads|likes|dislikes|title|author|type|missions&dir=asc|desc&q=…&offset=0
 //   GET    /api/items/:id          (counts as a download, unless ?peek)
 //   POST   /api/items              { type, title, author, description, data }
 //   DELETE /api/items/:id          X-Delete-Key, or Authorization: Bearer ADMIN_TOKEN
 //   POST   /api/items/:id/report   { reason: spam|inappropriate|impossible }
+//   POST   /api/items/:id/vote     { vote: 1 (like) | -1 (dislike) | 0 (take it back) }
+// Items in lists and from GET include likes, dislikes and myVote (the
+// asker's own vote).
 
 const PAGE = 24;
 const LIMITS = { title: 60, author: 40, description: 600, level: 20000, campaign: 400000, config: 100000 };
@@ -88,6 +92,9 @@ const publicItem = (row, withData) => ({
   created: row.created,
   downloads: row.downloads,
   impossible: row.impossible || 0,
+  likes: row.likes || 0,
+  dislikes: row.dislikes || 0,
+  myVote: row.my_vote || 0,
   ...(withData ? { data: row.data } : {}),
 });
 
@@ -96,13 +103,18 @@ const publicItem = (row, withData) => ({
 const SORTS = {
   created: 'created',
   downloads: 'downloads',
+  likes: 'likes',
+  dislikes: 'dislikes',
   title: 'title COLLATE NOCASE',
   author: 'author COLLATE NOCASE',
   type: 'type',
   missions: "COALESCE(json_extract(info, '$.missions'), 1)",
 };
 
-async function list(env, url) {
+// Adds the asker's own vote to each row (my_vote).
+const WITH_MY_VOTE = 'SELECT *, (SELECT vote FROM item_votes WHERE item_id = items.id AND ip_hash = ?) AS my_vote FROM items';
+
+async function list(env, url, ipHash) {
   const type = url.searchParams.get('type');
   let key = url.searchParams.get('sort');
   key = key === 'new' ? 'created' : key === 'popular' ? 'downloads' : key;
@@ -120,8 +132,8 @@ async function list(env, url) {
     const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
     args.push(like, like, like);
   }
-  const { results } = await env.DB.prepare(`SELECT * FROM items WHERE ${where.join(' AND ')} ORDER BY ${sort} LIMIT ? OFFSET ?`)
-    .bind(...args, PAGE + 1, offset).all();
+  const { results } = await env.DB.prepare(`${WITH_MY_VOTE} WHERE ${where.join(' AND ')} ORDER BY ${sort} LIMIT ? OFFSET ?`)
+    .bind(ipHash, ...args, PAGE + 1, offset).all();
   // Levels are small, so the list includes them (for previews); campaigns
   // are fetched when opened.
   return { items: results.slice(0, PAGE).map((r) => publicItem(r, r.type === 'level')), more: results.length > PAGE };
@@ -153,8 +165,8 @@ async function create(env, request, ipHash) {
 }
 
 // Counts as a download, unless ?peek (just showing it, e.g. for a link).
-async function get(env, id, peek) {
-  const row = await env.DB.prepare('SELECT * FROM items WHERE id = ?').bind(id).first();
+async function get(env, id, peek, ipHash) {
+  const row = await env.DB.prepare(`${WITH_MY_VOTE} WHERE id = ?`).bind(ipHash, id).first();
   if (!row || row.reports >= HIDE_AFTER_REPORTS) throw new HttpError(404, 'That is no longer in the gallery.');
   if (peek) return publicItem(row, true);
   await env.DB.prepare('UPDATE items SET downloads = downloads + 1 WHERE id = ?').bind(id).run();
@@ -170,6 +182,7 @@ async function remove(env, request, id) {
   if (!isAdmin && (!key || (await sha256(key)) !== row.delete_hash)) throw new HttpError(403, 'Only the person who shared this can delete it.');
   await env.DB.prepare('DELETE FROM items WHERE id = ?').bind(id).run();
   await env.DB.prepare('DELETE FROM item_reports WHERE item_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM item_votes WHERE item_id = ?').bind(id).run();
   return { ok: true };
 }
 
@@ -193,23 +206,43 @@ async function report(env, request, id, ipHash) {
   return { ok: true };
 }
 
+// One vote per person: a new one replaces theirs, 0 takes it back.
+async function vote(env, request, id, ipHash) {
+  let value;
+  try { value = JSON.parse(await request.text()).vote; } catch (e) { value = null; }
+  if (![1, -1, 0].includes(value)) throw new HttpError(400, 'Choose like or dislike.');
+  const row = await env.DB.prepare('SELECT reports FROM items WHERE id = ?').bind(id).first();
+  if (!row || row.reports >= HIDE_AFTER_REPORTS) throw new HttpError(404, 'That is no longer in the gallery.');
+  if (value) {
+    await env.DB.prepare(`INSERT INTO item_votes (item_id, ip_hash, vote, created) VALUES (?, ?, ?, ?)
+      ON CONFLICT (item_id, ip_hash) DO UPDATE SET vote = excluded.vote, created = excluded.created`).bind(id, ipHash, value, Date.now()).run();
+  } else {
+    await env.DB.prepare('DELETE FROM item_votes WHERE item_id = ? AND ip_hash = ?').bind(id, ipHash).run();
+  }
+  const counts = await env.DB.prepare(`SELECT COUNT(CASE WHEN vote = 1 THEN 1 END) AS likes, COUNT(CASE WHEN vote = -1 THEN 1 END) AS dislikes
+    FROM item_votes WHERE item_id = ?`).bind(id).first();
+  await env.DB.prepare('UPDATE items SET likes = ?, dislikes = ? WHERE id = ?').bind(counts.likes, counts.dislikes, id).run();
+  return { likes: counts.likes, dislikes: counts.dislikes, myVote: value };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
     try {
       const ipHash = await sha256(`${env.IP_SALT || 'wb2-gallery'}:${request.headers.get('CF-Connecting-IP') || 'local'}`);
-      const m = /^\/api\/items(?:\/([a-z0-9]{8})(\/report)?)?$/.exec(url.pathname);
+      const m = /^\/api\/items(?:\/([a-z0-9]{8})(?:\/(report|vote))?)?$/.exec(url.pathname);
       if (!m) {
         if (url.pathname === '/') return new Response('WorldBuilder 2 level gallery. Open it from the editor: https://jbrotherman.github.io/worldbuilder2-level-editor/\n', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
         throw new HttpError(404, 'Not found.');
       }
-      const [, id, isReport] = m;
-      if (!id && request.method === 'GET') return json(request, await list(env, url));
+      const [, id, action] = m;
+      if (!id && request.method === 'GET') return json(request, await list(env, url, ipHash));
       if (!id && request.method === 'POST') return json(request, await create(env, request, ipHash), 201);
-      if (id && isReport && request.method === 'POST') return json(request, await report(env, request, id, ipHash));
-      if (id && !isReport && request.method === 'GET') return json(request, await get(env, id, url.searchParams.has('peek')));
-      if (id && !isReport && request.method === 'DELETE') return json(request, await remove(env, request, id));
+      if (action === 'report' && request.method === 'POST') return json(request, await report(env, request, id, ipHash));
+      if (action === 'vote' && request.method === 'POST') return json(request, await vote(env, request, id, ipHash));
+      if (id && !action && request.method === 'GET') return json(request, await get(env, id, url.searchParams.has('peek'), ipHash));
+      if (id && !action && request.method === 'DELETE') return json(request, await remove(env, request, id));
       throw new HttpError(405, 'Method not allowed.');
     } catch (e) {
       if (!(e instanceof HttpError)) console.error(e);

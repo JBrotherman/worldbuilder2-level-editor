@@ -8,12 +8,19 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brick"></span>WB2 Level Editor</div>
-    <nav class="tabs" role="tablist" aria-label="Sections">
+    <div class="brand"><span class="brick"></span>WorldBuilder 2</div>
+    <nav class="tabs site-tabs" role="tablist" aria-label="Pages">
+      <button role="tab" data-tab="gallery" aria-selected="false" title="Levels and campaigns other players made">Gallery</button>
+      <button role="tab" data-tab="editor" aria-selected="true" title="Make your own levels, campaign and units">Editor</button>
+    </nav>
+    <div class="doc"></div>
+  </header>
+
+  <div class="subbar" data-for-tab="editor">
+    <nav class="tabs" role="tablist" aria-label="Editor">
       <button role="tab" data-tab="level" aria-selected="true">Level</button>
       <button role="tab" data-tab="campaign" aria-selected="false">Campaign</button>
       <button role="tab" data-tab="units" aria-selected="false">Units</button>
-      <button role="tab" data-tab="gallery" aria-selected="false">Gallery</button>
     </nav>
     <div class="doc" data-for-tab="level">
       <span id="docName">Untitled</span><span id="dirtyMark" class="dirty" hidden>●</span>
@@ -23,8 +30,7 @@
       <button id="btnOpen" title="Open a level (Ctrl+O)">Open</button>
       <button id="btnSave" title="Save (Ctrl+S)">Save</button>
       <button id="btnSaveAs" title="Save under a new name">Save as</button>
-      <button id="btnImport" title="Import a level from a share code, text or file">Import</button>
-      <button id="btnShare" title="Get a share code or file for this level">Share</button>
+      <button id="btnShare" title="Share this level in the gallery, or as a code or file">Share</button>
       <span class="sep"></span>
       <button id="btnPlay" class="primary" title="Build into the game and launch it (F5)">▶ Play in game</button>
     </nav>
@@ -32,9 +38,7 @@
     <nav class="actions" data-for-tab="campaign" id="campaignActions" hidden></nav>
     <div class="doc" data-for-tab="units" hidden></div>
     <nav class="actions" data-for-tab="units" id="unitsActions" hidden></nav>
-    <div class="doc" data-for-tab="gallery" hidden></div>
-    <nav class="actions" data-for-tab="gallery" id="galleryActions" hidden></nav>
-  </header>
+  </div>
 
   <main class="page" id="campaignView" data-for-tab="campaign" hidden></main>
   <main class="page" id="unitsView" data-for-tab="units" hidden></main>
@@ -148,7 +152,10 @@
           <ul id="openGame" class="open-list"></ul>
         </div>
       </div>
-      <menu><button value="cancel">Close</button></menu>
+      <menu>
+        <button type="button" id="btnImport" class="left" title="Open a level someone sent you: a share code, level text or a level file">Paste a code or open a file…</button>
+        <button value="cancel">Close</button>
+      </menu>
     </form>
   </dialog>
 
@@ -177,14 +184,34 @@
   <dialog id="dlgShare">
     <form method="dialog">
       <h2>Share this level</h2>
-      <p class="muted">Send this code to someone; they can paste it into <strong>Import</strong>.</p>
-      <textarea id="shareCode" rows="6" readonly spellcheck="false"></textarea>
+      <div class="share-option">
+        <div><h3>In the gallery</h3><p class="muted">Everyone can find it, play it and download it.</p></div>
+        <button type="button" id="btnGalleryShare" class="primary">Share to gallery</button>
+      </div>
+      <h3>Or send it yourself</h3>
+      <p class="muted">Send this code to someone; they paste it under <strong>Open</strong>.</p>
+      <textarea id="shareCode" rows="5" readonly spellcheck="false"></textarea>
       <p class="muted" id="shareInfo"></p>
       <menu>
         <button type="button" id="btnDownloadLevel" class="left">Download file</button>
-        <button type="button" id="btnGalleryShare" title="Share it in the online gallery for everyone">Share to gallery</button>
-        <button value="cancel">Close</button><button type="button" id="btnCopyCode" class="primary">Copy code</button>
+        <button type="button" id="btnCopyCode">Copy code</button>
+        <button value="cancel">Close</button>
       </menu>
+    </form>
+  </dialog>
+
+  <dialog id="dlgCampaignShare">
+    <form method="dialog">
+      <h2>Share your campaign</h2>
+      <div class="share-option">
+        <div><h3>In the gallery</h3><p class="muted">Everyone can find it, play it and download it.</p></div>
+        <button type="button" id="btnCampaignGallery" class="primary">Share to gallery</button>
+      </div>
+      <div class="share-option">
+        <div><h3>As a file</h3><p class="muted">One file with the missions, every level it uses and your unit settings. Others load it with <strong>Import</strong> in their Campaign tab. Also handy as a backup.</p></div>
+        <button type="button" id="btnCampaignDownload">Download file</button>
+      </div>
+      <menu><button value="cancel">Close</button></menu>
     </form>
   </dialog>
 

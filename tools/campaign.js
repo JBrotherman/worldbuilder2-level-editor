@@ -4,7 +4,10 @@
 // campaign/campaign.json:
 //   { "missions": { "map1.1": { "level": "<file in levels/>"|null,
 //                               "title": "..."|null, "unlocks": [2, 3]|null } } }
-//   null/missing means "keep the original".
+//   null/missing means "keep the original". { "empty": true } is a mission
+//   the campaign doesn't use: nothing unlocks it, so it stays locked, and
+//   locked missions aren't shown on the world map. Mission 1.1 is always
+//   open, so it can't be empty. Unlock 13 opens the next world.
 // campaign/config.txt: the full game config text, if it has been tuned.
 'use strict';
 const fs = require('fs');
@@ -35,6 +38,7 @@ function saveCampaign(c) {
   const missions = {};
   for (const [slot, m] of Object.entries((c && c.missions) || {})) {
     if (!SLOT_RE.test(slot) || !m) continue;
+    if (m.empty === true && slot !== PLAY_SLOT) { missions[slot] = { empty: true }; continue; }
     const entry = {};
     if (typeof m.level === 'string' && m.level) entry.level = m.level;
     if (typeof m.title === 'string' && m.title.trim()) entry.title = m.title.trim().slice(0, 40);
@@ -99,7 +103,9 @@ function applyCampaign(g, c, readLevel = readLevelFile) {
   const terrainChars = game.getText(g, 'terrainmap').split('\n').filter(Boolean).map((l) => l[0]);
   const titles = { ...orig.titles };
   const unlocks = { ...orig.unlocks };
+  const empty = emptySlots(c);
   for (const [slot, m] of Object.entries(c.missions)) {
+    if (empty.has(slot)) { unlocks[slot] = []; continue; }
     let title = m.title;
     if (m.level) {
       const level = Level.parse(readLevel(m.level, terrainChars));
@@ -109,12 +115,22 @@ function applyCampaign(g, c, readLevel = readLevelFile) {
     if (title) titles[slot] = title.replace(/[\r\n]/g, ' ').slice(0, 40);
     if (m.unlocks) unlocks[slot] = m.unlocks;
   }
+  // Nothing may unlock a mission the campaign doesn't use.
+  for (const s of Object.keys(unlocks)) {
+    const w = SLOT_RE.exec(s)[1];
+    unlocks[s] = unlocks[s].filter((u) => !empty.has(`map${w}.${u}`));
+  }
   const order = Object.keys(orig.titles);
   const [w1, w2] = ['1', '2'].map((w) => order.filter((s) => s.startsWith(`map${w}.`)));
   const slotParts = (s) => SLOT_RE.exec(s).slice(1, 3);
   game.setText(g, 'level names', [...w1, ...w2].map((s) => `${slotParts(s).join(' ')} ${titles[s]}`).join('\n'));
   game.setText(g, 'worlds', ['-- world, mission, unlocks',
     ...[...w1, ...w2].map((s) => `${slotParts(s).join('\t')}\t${(unlocks[s] || []).join(',')}`)].join('\n'));
+}
+
+// Missions the campaign doesn't use (never mission 1.1, which is always open).
+function emptySlots(c) {
+  return new Set(Object.entries((c && c.missions) || {}).filter(([s, m]) => m && m.empty === true && s !== PLAY_SLOT).map(([s]) => s));
 }
 
 // Saved progress: one "world mission state" line per mission, CR separated.
@@ -129,9 +145,12 @@ function writePrefs(dir, state) {
 function buildCampaign({ freshProgress = true, unlockAll = false } = {}) {
   const g = game.load();
   applyConfig(g);
-  applyCampaign(g, loadCampaign());
+  const c = loadCampaign();
+  applyCampaign(g, c);
   const dir = game.writeBuild(g, BUILD_DIR);
-  if (unlockAll) writePrefs(dir, () => 1);
+  // Missions the campaign doesn't use stay locked (hidden).
+  const empty = emptySlots(c);
+  if (unlockAll) writePrefs(dir, (w, m) => (empty.has(`map${w}.${m}`) ? -1 : 1));
   else if (freshProgress) {
     const prefs = path.join(dir, 'Prefs', PREFS_FILE);
     if (fs.existsSync(prefs)) fs.unlinkSync(prefs);

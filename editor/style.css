@@ -154,6 +154,11 @@ dialog h2 { margin: 0 0 12px; font-size: 16px; }
 dialog h3 { font-size: 12px; margin: 0 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 dialog label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; color: var(--muted); }
 dialog menu { display: flex; justify-content: flex-end; gap: 8px; padding: 0; margin: 14px 0 0; }
+#confirmText { white-space: pre-line; max-width: 560px; }
+.share-option {display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; max-width: 640px; }
+.share-option h3 { margin: 0 0 2px; }
+.share-option p { margin: 0; }
+.share-option button { flex: none; }
 dialog textarea { width: min(640px, 80vw); font: 12px/1.35 ui-monospace, Consolas, monospace; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .open-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: min(720px, 86vw); }
@@ -176,6 +181,11 @@ dialog textarea { width: min(640px, 80vw); font: 12px/1.35 ui-monospace, Consola
 .tabs button { border: 0; background: transparent; padding: 4px 14px; border-radius: 6px; color: var(--muted); }
 .tabs button:hover { color: var(--text); background: var(--panel-2); }
 .tabs button[aria-selected="true"] { background: var(--panel-2); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+/* The pages (Gallery, Editor) in the top bar; the Editor's own tabs and
+   buttons in the bar under it. */
+.site-tabs > * { font-size: 14px; font-weight: 600; }
+.subbar { display: flex; align-items: center; gap: 16px; padding: 6px 14px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.subbar .tabs { background: transparent; border: 0; padding: 0; }
 menu .left { margin-right: auto; }
 button.link { background: none; border: 0; padding: 0; color: var(--muted); font-size: 11px; text-decoration: underline; cursor: pointer; }
 button.link:hover { color: var(--text); background: none; }
@@ -194,6 +204,8 @@ button.link:hover { color: var(--text); background: none; }
 .mission { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
 .mission.custom { border-color: #6b5a1c; }
 .mission.unreachable { border-style: dashed; }
+.mission.empty { background: transparent; border-style: dashed; opacity: .6; }
+.mission.empty:hover, .mission.empty:focus-within { opacity: 1; }
 .mission header { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 .mission-no { font-weight: 700; }
 .mission label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 12px; }
@@ -298,6 +310,10 @@ a.button.primary:hover { background: #ffd94a; }
 .gallery-table .gallery-desc { color: var(--muted); font-size: 12px; margin: 2px 0 0; -webkit-line-clamp: 2; max-width: 560px; }
 .gallery-table .col-num { text-align: right; width: 70px; font-variant-numeric: tabular-nums; }
 .gallery-table th.col-num { text-align: right; }
+.gallery-table .col-vote { width: 64px; text-align: center; }
+.vote { padding: 2px 8px; border-radius: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border-color: transparent; color: var(--muted); }
+.vote:hover { border-color: var(--line); color: var(--text); }
+.vote.on { background: #3a3220; border-color: #6b5a1c; color: var(--accent); }
 .gallery-table .col-type, .gallery-table .col-date, .gallery-table .col-author { white-space: nowrap; color: var(--muted); }
 .gallery-table .col-author { color: var(--text); }
 .gallery-table .col-actions { white-space: nowrap; text-align: right; width: 1%; }
@@ -314,7 +330,8 @@ a.button.primary:hover { background: #ffd94a; }
   .gallery-table, .gallery-table tbody, .gallery-table tr, .gallery-table td { display: block; width: auto; }
   .gallery-table tr { display: grid; grid-template-columns: 56px 1fr; gap: 2px 10px; padding: 10px; border-bottom: 1px solid var(--line); }
   .gallery-table td { border: none; padding: 0; text-align: left !important; }
-  .gallery-table .col-thumb { grid-row: span 6; }
+  .gallery-table .col-thumb { grid-row: span 8; }
+  .gallery-table .col-vote { display: inline-block; grid-column: 2; }
   .gallery-table .col-num, .gallery-table .col-author { font-size: 12px; color: var(--muted); }
   .gallery-table td[data-label]::before { content: attr(data-label) ": "; }
   .gallery-table .col-actions { margin-top: 6px; }

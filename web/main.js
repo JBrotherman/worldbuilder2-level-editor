@@ -113,14 +113,14 @@ function overlay() {
 }
 
 // Behind the game files window: a picture of the editor as it is with the
-// game files (web/editor-preview.jpg), under the real top bar.
+// game files (web/editor-preview.jpg), under the real top bars.
 function showEditorPicture() {
   let pic = $('#wb2EditorPicture');
   if (!pic) {
     pic = el('div', { id: 'wb2EditorPicture', 'aria-hidden': 'true' });
     document.body.append(pic);
   }
-  const top = $('.topbar');
+  const top = $('.subbar:not([hidden])') || $('.topbar');
   pic.style.top = `${top ? Math.round(top.getBoundingClientRect().bottom) : 0}px`;
   pic.hidden = false;
 }
@@ -272,11 +272,10 @@ function adaptEditorPage() {
     updateGameButton();
   }
   // Online, the gallery is its own page (the site's front page): the
-  // Gallery tab goes there, first in line.
+  // Gallery tab goes there.
   const galleryTab = $('.tabs [data-tab=gallery]');
   if (galleryTab) {
-    galleryTab.parentNode.prepend(el('a', { href: './', class: 'tab-link', title: 'Levels and campaigns other players made' }, 'Gallery'));
-    galleryTab.remove();
+    galleryTab.replaceWith(el('a', { href: './', class: 'tab-link', title: 'Levels and campaigns other players made' }, 'Gallery'));
   }
 }
 

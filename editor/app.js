@@ -74,6 +74,13 @@
     return new Promise((resolve) => d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true }));
   }
 
+  // The same window as a notice: only an OK button.
+  async function messageDialog(title, text) {
+    const cancel = $('#dlgConfirm button[value=cancel]');
+    cancel.hidden = true;
+    try { await confirmDialog(title, text); } finally { cancel.hidden = false; }
+  }
+
   function openDialog(d) {
     d.returnValue = '';
     d.showModal();
@@ -829,7 +836,9 @@
     $('#dlgImport textarea').value = bytesLatin1(new Uint8Array(await f.arrayBuffer()));
   });
 
+  // In the Open window.
   $('#btnImport').addEventListener('click', async () => {
+    $('#dlgOpen').close();
     const d = $('#dlgImport');
     const ta = d.querySelector('textarea');
     ta.value = '';
@@ -903,12 +912,21 @@
   });
 
   // ---------------------------------------------------------------- tabs
+  // Two pages, Gallery and Editor; the Editor has the Level, Campaign and
+  // Units tabs. showTab('editor') goes back to the last of those.
+  const EDITOR_TABS = ['level', 'campaign', 'units'];
   let currentTab = 'level';
+  let editorTab = 'level';
   function showTab(tab) {
+    if (tab === 'editor') tab = editorTab;
+    const page = EDITOR_TABS.includes(tab) ? 'editor' : tab;
+    if (page === 'editor') editorTab = tab;
     currentTab = tab;
     document.body.dataset.tab = tab;
-    for (const b of document.querySelectorAll('[data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
-    for (const n of document.querySelectorAll('[data-for-tab]')) n.hidden = n.dataset.forTab !== tab;
+    document.body.dataset.page = page;
+    const shown = (name) => name === tab || name === page;
+    for (const b of document.querySelectorAll('[data-tab]')) b.setAttribute('aria-selected', String(shown(b.dataset.tab)));
+    for (const n of document.querySelectorAll('[data-for-tab]')) n.hidden = !shown(n.dataset.forTab);
     if (tab === 'level') view.requestDraw();
     window.dispatchEvent(new CustomEvent('wb2:tab', { detail: tab }));
     try { localStorage.setItem('wb2-editor-tab', tab); } catch (e) { /* ignore */ }
@@ -936,7 +954,7 @@
   // Shared with campaign.js / units.js (and handy for debugging).
   window.wb2 = {
     state, view, catalog, terrainChars,
-    el, toast, confirmDialog, openDialog, spriteUrl, pretty, typeName, terrainLabel, describeItem,
+    el, toast, confirmDialog, messageDialog, openDialog, spriteUrl, pretty, typeName, terrainLabel, describeItem,
     downloadFile, safeFileName, latin1Bytes, bytesLatin1, dirtyChecks, refreshCatalog, showTab,
     tab: () => currentTab,
     // Open a saved level in the Level tab.
@@ -984,5 +1002,5 @@
   window.dispatchEvent(new CustomEvent('wb2:ready'));
   let startTab = 'level';
   try { startTab = localStorage.getItem('wb2-editor-tab') || 'level'; } catch (e) { /* ignore */ }
-  showTab(['level', 'campaign', 'units'].includes(startTab) ? startTab : 'level');
+  showTab(EDITOR_TABS.includes(startTab) ? startTab : 'level');
 })();
